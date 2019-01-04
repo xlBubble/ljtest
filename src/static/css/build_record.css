@@ -1,0 +1,47 @@
+#item-head{
+    text-align: left;
+    line-height: normal;
+    font-size: 30px;
+    width: 96%;
+}
+#item-body{
+    margin: 10px 0 0 0;
+    text-align: left;
+    line-height: normal;
+    width: 95%;
+    background-color: #eee;
+    color: #999;
+    padding: 10px;
+}
+#item-content{
+    width: 95%;
+    padding: 10px;
+    text-align: left;
+    font-size: inherit;
+    line-height: normal;
+}
+#editor-holds{
+    width: 95%;
+    text-align: left;
+}
+#editor-holds textarea{
+    width: 100%;
+    height: 200px;
+}
+.record-head{
+    margin: 10px 0 0 5%;
+    text-align: left;
+    line-height: normal;
+    width: 90%;
+    background-color: #eee;
+    color: #999;
+    padding: 10px;
+}
+.record-body{
+    margin: 10px 0 10px 5%;
+    width: 90%;
+    padding: 10px;
+    text-align: left;
+    font-size: inherit;
+    line-height: normal;
+}

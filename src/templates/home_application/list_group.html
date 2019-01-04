@@ -1,0 +1,265 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+    ${parent.head()}
+    <link href="${STATIC_URL}css/sumoselect.css" rel="stylesheet">
+    <link href="${STATIC_URL}css/build_group.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/jquery.sumoselect.min.js"></script>
+    <link href="${STATIC_URL}css/toastr.min.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/toastr.min.js"></script>
+</%block>
+
+<%block name="content">
+    <%include file="sidebar.html"/>
+    <div class="holds" style="padding-top:100px">
+        <div id="hd" class="king-page-topbar pl20 pr20 clearfix project-nav" data-step="5" data-intro="这里是导航，包含会议组的名字。" data-position="bottom">
+            <ul class="breadcrumb king-breadcrumb pl0 bg-transparent" style="border:0;text-align: left;">
+                % if old_url == 0:
+                    <li><a href="${SITE_URL}">首页</a></li>
+                    <li class="active">${header}</li>
+                % else:
+                    <li><a href="${SITE_URL}">首页</a></li>
+                    <li><a href="${SITE_URL}meeting/${data['group'].id}/">${data['group'].name}</a></li>
+                    <li class="active">${header}</li>
+                % endif
+            </ul>
+        </div>
+        <div id="form-holds" style="width:600px;margin:20px 0 0 200px">
+            <form id="group-form" method="post" action="${SITE_URL}group/save/" class="form-horizontal">
+                % if data['new']:
+                    <input type="hidden" name="type" value="new" />
+                % else:
+                    <input type="hidden" name="type" value="update" />
+                    <input type="hidden" name="group_id" value="${data['group'].id}" />
+                % endif
+                <input class="csrf-input" type="hidden" name="csrfmiddlewaretoken" value="" />
+                <div class="form-group" style="width:400px;margin:20px" data-step="2" data-intro="为你的会议起个名字，长度不超过50个字符。" data-position="right">
+                    <label for="group-name" class="control-label label-font">会议名称：</label>
+                    % if data['new']:
+                        <input name="name" type="text" id="group-name" placeholder="输入会议名称" style="width:190px">
+                    % else:
+                        <input name="name" type="text" id="group-name" value="${data['group'].name}" style="width:190px">
+                    % endif
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div class="form-group" style="width:400px;margin:20px"  data-step="3" data-intro="会议管理员拥有管理成员和类别的权限。" data-position="right">
+                    <label for="group-manager" class="control-label label-font">会议管理员：</label>
+                    <select name="manager" multiple="multiple" id="group-manager">
+                        <%
+                            index = 0
+                            manager = []
+                        %>
+                        % for m in members:
+                            <option value="${m.username}">${m.username}</option>
+                        % if not data['new'] and m.username in data['manager']:
+                            <% manager.append(index) %>
+                        % endif
+                        <% index += 1 %>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div id="manager-box" class="selected_box"></div>
+                <div class="form-group" style="width:400px;margin:20px" data-step="4" data-intro="会议的基本组成成员。" data-position="right">
+                    <label for="group-member" class="control-label label-font">会议成员：</label>
+                    <select name="member" multiple="multiple" id="group-member">
+                        <%
+                            index = 0
+                            member = []
+                        %>
+                        % for m in members:
+                            <option value="${m.username}">${m.username}</option>
+                        % if not data['new'] and m.username in data['member']:
+                            <% member.append(index) %>
+                        % endif
+                        <% index += 1 %>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr" style="visibility: hidden">*</span>
+                </div>
+                <div id="member-box" class="selected_box"></div>
+                <div class="form-group" style="width:400px;margin:20px" data-step="5" data-intro="对该会议关注的人，例如知会人，不能进入会议。" data-position="right">
+                    <label for="group-focus" class="control-label label-font">关注人：</label>
+                    <select name="focus" multiple="multiple" id="group-focus">
+                        <%
+                            index = 0
+                            focus = []
+                        %>
+                        % for m in members:
+                            <option value="${m.username}">${m.username}</option>
+                        % if not data['new'] and m.username in data['focus']:
+                            <% focus.append(index) %>
+                        % endif
+                        <% index += 1 %>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr" style="visibility: hidden">*</span>
+                </div>
+                <div id="focus-box" class="selected_box"></div>
+                <div class="form-group" style="width:200px;margin:40px;margin-left:187px">
+                    <span id="confirm" class="btn btn-large btn-success" style="margin-right:10px">确认保存</span>
+                    <span id="cancel" class="btn btn-large btn-default" style="background:#CCD1D1">取消返回</span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        function htmlEncode(unsafe) {
+            return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+        }
+        var group_manager = $("#group-manager");
+        var group_member = $("#group-member");
+        var group_focus = $("#group-focus");
+        group_manager.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择管理员",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        group_member.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择成员",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        group_focus.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择关注人",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        var manager_namelist = [];
+        var member_namelist = [];
+        var focus_namelist = [];
+        group_manager.bind('change', function (event) {
+            manager_namelist = [];
+            group_manager.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    manager_namelist.push($(this)[0].innerText);
+                }
+            });
+            var manager_box = $('#manager-box');
+            manager_box.empty();
+            if (manager_namelist.length) {
+                var html = '';
+                for (var i=0; i<manager_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-info" style="white-space: normal;">' + manager_namelist[i] + '</span>';
+                }
+                manager_box.append(html);
+            }
+        });
+        group_member.bind('change', function (event) {
+            member_namelist = [];
+            group_member.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    member_namelist.push($(this)[0].innerText);
+                }
+            });
+            var member_box = $('#member-box');
+            member_box.empty();
+            if (member_namelist.length) {
+                var html = '';
+                for (var i=0; i<member_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-success" style="white-space: normal;">' + member_namelist[i] + '</span>';
+                }
+                member_box.append(html);
+            }
+        });
+        group_focus.bind('change', function (event) {
+            focus_namelist = [];
+            group_focus.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    focus_namelist.push($(this)[0].innerText);
+                }
+            });
+            var focus_box = $('#focus-box');
+            focus_box.empty();
+            if (focus_namelist.length) {
+                var html = '';
+                for (var i=0; i<focus_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-default" style="white-space: normal;">' + focus_namelist[i] + '</span>';
+                }
+                focus_box.append(html);
+            }
+        });
+        var name = '';
+        var manager = [];
+        var member = [];
+        var focus = [];
+        function check_name(){
+            name = $("#group-name").val();
+            if (check_name_format(name)) {return true;} else {
+                toastr["error"]("小组名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等");
+                return false;
+            }
+        }
+        function check_manager(){
+            manager = $("#group-manager").val();
+            member = $("#group-member").val();
+            focus = $("#group-focus").val();
+            if (manager) {return true;} else {
+                toastr["error"]("小组管理员是必填项", "保存失败");
+                return false;
+            }
+        }
+        var confirm_btn = $("#confirm");
+            % if data['new']:
+                confirm_btn.click(function() {
+                    if (check_name() && check_manager()) {
+                        $(".csrf-input").val(getCookie('csrftoken'));
+                        $("#group-form").submit();
+                    }
+                });
+            % else:
+                confirm_btn.click(function(){
+                    if (check_name() && check_manager()){
+                        art.dialog({
+                            width: 550,
+                            id: 'show-dialog',
+                            title: '保存确认',
+                            content: '<p class="label-font">确认保存会议组吗？</p>',
+                            lock: true,
+                            fixed: true,
+                            ok: function () {
+                                $(".csrf-input").val(getCookie('csrftoken'));
+                                $("#group-form").submit();
+                            },
+                            okVal: '确认保存',
+                            cancelVal: '取消',
+                            cancel: function () {
+                            }
+                        });
+                        set_button();
+                    }
+                });
+            % endif
+        $("#cancel").click(function(){
+            window.location.href = "${SITE_URL}meeting/${old_url}/"
+        });
+        $(document).ready(function(){
+            % for guy in manager:
+                group_manager[0].sumo.selectItem(${guy});
+            % endfor
+            % for guy in member:
+                group_member[0].sumo.selectItem(${guy});
+            % endfor
+            % for guy in focus:
+                group_focus[0].sumo.selectItem(${guy});
+            % endfor
+        });
+    </script>
+</%block>

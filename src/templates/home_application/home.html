@@ -1,0 +1,28 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+	<title>蓝鲸智云应用开发框架</title>
+	${parent.head()}
+</%block>
+
+<%block name="content">
+	<div>
+		<!-- 蓝鲸智云开发框架说明  Start -->
+		<div>
+			<h3>蓝鲸智云应用开发框架<small>助力你的自动化</small></h3>
+		</div>
+		<!-- 蓝鲸智云开发框架说明  End -->
+	</div>
+	<!-- 功能推荐	 -->	
+	<div id="func_div" style="margin-top: 30px">
+		<div class="loading"></div>
+	</div>
+</%block>
+<script src="${STATIC_URL}js/func_check.js"></script>
+<script>
+	$(function(){
+		//显示功能推荐
+		$("#func_div").load(site_url + 'get_func_part/');
+	})
+</script>
+

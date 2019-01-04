@@ -1,0 +1,13 @@
+.selected_box{
+    text-align: left;
+    width: 608px;
+    margin: 0 20px 20px 180px;
+    white-space: normal;
+    word-wrap: break-word;
+    word-break:break-all;
+}
+.selected_box span{
+    margin: 5px;
+    white-space: normal !important;
+    display: inline-block;
+}

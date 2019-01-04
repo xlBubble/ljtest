@@ -1,0 +1,92 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+    ${parent.head()}
+    <link href="${STATIC_URL}css/index.css" rel="stylesheet"/>
+    <link href="${STATIC_URL}css/toastr.min.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/toastr.min.js"></script>
+</%block>
+
+<%block name="content">
+    <div class="holds">
+        <div class="blank_top"></div>
+        <table id="hold-table">
+            <tbody>
+                % if len(groups) == 0:
+                    <tr>
+                        <td>
+                            <span class="notice-text" style="font-size:25px;margin-right:50px">尚未加入任何会议组</span>
+                            <span id="build-group" class="btn btn-mid btn-success" data-step="1" data-intro="点击新建一个会议组。" data-position="bottom"><i class="fa fa-plus"></i>新建会议组</span>
+                        </td>
+                    </tr>
+                % else:
+                <tr>
+                    <td id="select-label">选择会议&nbsp;</td>
+                    <td id="select-box" data-step="1" data-intro="选择一个会议组。" data-position="top">
+                        <select id="select-group" class="span6 combobox">
+                            % for group in groups:
+                                % if me.last_group_id == group['id']:
+                                    <option value="${group['id']}" id="index-${group['id']}" selected></option>
+                                % else:
+                                    <option value="${group['id']}" id="index-${group['id']}"></option>
+                                % endif
+                                <script>
+                                    $("#index-${group['id']}").text(decodeURIComponent(escape(atob("${group['name']}"))));
+                                </script>
+                            % endfor
+                        </select>
+                        <script>
+                            $("#select-group").find('option').eq(0).prop('selected');
+                        </script>
+                    </td>
+                    <td  style="font-size:15px;">
+                        <span id="enter-meeting" class="btn btn-large btn-success" title="进入会议" data-step="2" data-intro="点击按钮就可以进入会议。" data-position="left"><i class="fa fa-briefcase"></i>进入会议</span>
+                        <span id="build-group" class="btn btn-large btn-info" style="padding-left:23px" title="新建会议" data-step="3" data-intro="你也可以新建一个会议组。" data-position="right"><i class="fa fa-plus"></i></span>
+                    </td>
+                </tr>
+                <tr>
+					<td>&nbsp;</td><td></td>
+				</tr><tr>
+					<td>&nbsp;</td><td></td>
+				</tr>
+                <tr>
+                    <td></td>
+                    <td style="text-align: left;display:none">
+                        <div id="left-btn" class="btn-group">
+                            <span id="enter-meeting" class="btn btn-mid btn-success" style="font-size:15px;margin-right:2px;padding-right:15px"><i class="fa fa-briefcase"></i>进入会议</span>
+                            <span id="build-group" class="btn btn-mid btn-success" style="font-size:15px"><i class="fa fa-newspaper-o"></i>新建会议组</span>
+                        </div>
+                        <div class="btn-group" style="float:left;margin-top:10px;margin-left:20px;display:none">
+                            <span class="btn btn-mid" style="font-size:15px;margin-right:2px"><i class="fa fa-envelope"></i>发送会议纪要</span>
+                            <span class="btn btn-mid" style="font-size:15px;padding-right:0"><i class="fa fa-clock-o"></i></span>
+                        </div>
+                    </td>
+                </tr>
+                % endif
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(function(){
+           $("#hold-table").css('margin-top', $(window).height() * 0.1 + 'px')
+        });
+        var index_group_id = $("#select-group").val();
+        $(document).ready(function(){
+            $('.combobox').combobox({
+                selected: function(event, ui){
+                    index_group_id = $(this).val();
+                }
+            });
+        });
+        $("#build-group").click(function(){
+            window.location.href = "${SITE_URL}group/manager/?old_url=0&type=new";
+        });
+        $("#enter-meeting").click(function(){
+            if (index_group_id == '0'){
+                toastr["error"]("请选择一个会议组");
+            } else {
+                window.location.href = "${SITE_URL}meeting/" + index_group_id + "/";
+            }
+        });
+    </script>
+</%block>

@@ -1,0 +1,394 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+    ${parent.head()}
+    <link href="${STATIC_URL}css/sumoselect.css" rel="stylesheet">
+    <link href="${STATIC_URL}css/build_record.css" rel="stylesheet">
+    <link href="${STATIC_URL}uploadify/uploadify.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/jquery.sumoselect.min.js"></script>
+    <link href="${STATIC_URL}css/toastr.min.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/toastr.min.js"></script>
+    <script src="${STATIC_URL}xheditor-1.2.2/xheditor-1.2.2.min.js"></script>
+    <script src="${STATIC_URL}xheditor-1.2.2/xheditor_lang/zh-cn.js"></script>
+    <script src="${STATIC_URL}uploadify/jquery.uploadify-3.1.min.js"></script>
+    <script src="${STATIC_URL}js/jquery.fileupload.js"></script>
+    <script src="${STATIC_URL}js/jquery.ui.widget.js"></script>
+    <style>
+        .xh_attachment{
+            background: transparent url(${STATIC_URL}img/attach.gif) no-repeat 16px 16px;
+            background-position: 2px 2px;
+        }
+    </style>
+</%block>
+
+<%block name="content">
+    <%include file="sidebar.html"/>
+    <div class="holds" style="padding-top:100px;padding-bottom: 100px;">
+        <div id="hd" class="king-page-topbar pl20 pr20 clearfix project-nav" data-step="5" data-intro="这里是导航，包含会议组的名字。" data-position="bottom">
+            <ul class="breadcrumb king-breadcrumb pl0 bg-transparent" style="border:0;text-align: left;">
+                <li><a href="${SITE_URL}">首页</a></li>
+                <li><a href="${SITE_URL}meeting/${group.id}/">${group.name}</a></li>
+                <li class="active">${header}</li>
+            </ul>
+        </div>
+        <div id="form-holds" style="margin:20px 0 100px 256px">
+            <div id="item-head">
+                <span style="" data-step="2" data-intro="该项目的名称。" data-position="right">${item.name}</span>
+                <div class="btn-group pull-right">
+                    <a id="add-record" href="javascript:void(0)" class="btn btn-info" onclick="add_record()" data-step="5" data-intro="点击添加你的跟进。" data-position="left">
+                        <i class="fa fa-plus"></i> 跟进
+                    </a>
+                    <a id="edit-item" href="javascript:void(0)" class="btn btn-warning">
+                        <i class="fa fa-edit"></i> 编辑
+                    </a>
+                    <a id="remove-item" href="javascript:void(0)" class="btn btn-danger">
+                        <i class="fa fa-close"></i> 删除
+                    </a>
+                    <a id="back-item" href="javascript:void(0)" class="btn btn-default" >
+                        <i class="fa fa-reply"></i> 返回
+                    </a>
+                </div>
+            </div>
+            <div id="item-body" data-step="3" data-intro="该项目的基本信息。" data-position="bottom">
+                <span>分类: ${item.category.name}</span>
+                <br>
+                <span>负责人:
+                    % for member in item.manager.filter(isActive=True):
+                        ${member.username}&nbsp;
+                    % endfor
+                </span>
+                <br>
+                <span>创建者：${item.creator.username}</span>
+                <span>最后编辑者：${item.updater.username}</span>
+                <br>
+                <span>创建于：${item.create_time.strftime("%Y-%m-%d %H:%M:%S")}</span>
+                <span>更新于: ${item.update_time.strftime("%Y-%m-%d %H:%M:%S")}</span>
+            </div>
+            <div id="item-content" data-step="4" data-intro="项目的详细描述、需求或初期规划。" data-position="top"></div>
+            <div id="editor-holds">
+                <form id="record-form" method="post" action="${SITE_URL}record/save/">
+                    <input class="csrf-input" type="hidden" name="csrfmiddlewaretoken" value="" />
+                    <input type="hidden" name="type" value="new" />
+                    <input type="hidden" name="item_id" value="${item.id}" />
+                    <input type="hidden" name="group_id" value="${group.id}" />
+                    <textarea title="" id="editor" name="content"></textarea>
+                </form>
+                <div class="form-group" style="margin: 10px 0 0 0">
+                    <a id="save-record" href="javascript:void(0)" class="btn btn-large btn-success mr10">
+                        确认保存
+                    </a>
+                    <a id="cancel-record" href="javascript:void(0)" class="btn btn-large btn-default" style="background:#CCD1D1;">
+                        取消返回
+                    </a>
+                </div>
+            </div>
+            <div id="record-holds" data-step="6" data-intro="项目下的跟进信息，最上方的为最新回复。" data-position="left"></div>
+        </div>
+    </div>
+    <div style="display:none" >
+        <textarea title="" id="parser"></textarea>
+    </div>
+    <script>
+        function GetURLParameter(sParam) {
+            var sPageURL = window.location.search.substring(1);
+            var sURLVariables = sPageURL.split('&');
+            for (var i = 0; i < sURLVariables.length; i++) {
+                var sParameterName = sURLVariables[i].split('=');
+                if (sParameterName[0] == sParam) {
+                    return sParameterName[1];
+                }
+            }
+        }
+        var parser = $("#parser").xheditor({
+            skin:'nostyle',
+            disableContextmenu:true,
+            html5Upload:false
+        });
+        function script_parser(data){
+            parser.setSource(filterXSS(data));
+            return parser.getSource();
+        }
+        var allPlugin={
+            new_attachment:{c:'xh_attachment',t:'上传附件', h:1,e:function(){
+                var _this=this;
+                var jTest=$('<div style="width:300px;height:100px;overflow:auto;"><span class="btn btn-info" id="upload_btn">上传</span><input type="file" name="file" id="file_upload1" data-url="${SITE_URL}file/put/" style="display:none"/></div>');
+                _this.saveBookmark();
+                _this.showDialog(jTest);
+                $("#upload_btn").click(function(){
+                    $("#file_upload1").click();
+                });
+                $("#file_upload1").fileupload({
+                    formData: {"csrfmiddlewaretoken": getCookie('csrftoken'), "group_id": "${group.id}"},
+                    dataType: 'json',
+                    add: function (e, data) {
+                        if (data.files[0].size > 1024*1024*30){
+                            toastr["error"]("文件大小限制30MB以内", "保存失败");
+                        } else {
+                            data.submit();
+                        }
+                        _this.hidePanel();
+                    },
+                    done: function (e, data){
+                        var obj_data = data.result;
+                        _this.loadBookmark();
+                        if (obj_data['success']){
+                            var f = obj_data['data'];
+
+                            if(f['ext']=="png" || f['ext']=="jpg" || f['ext']=="gif" || f['ext'] == "bmp"){
+                                _this.pasteHTML('<img style="max-width:500px" src="${SITE_URL}file/get/?group_id=${group.id}&file_id='+f["id"]+'"/><br/>')
+                            }else{
+                                _this.pasteHTML('<img src="${STATIC_URL}img/page.gif" width="16" height="16"/><a href="${SITE_URL}file/get/?group_id=${group.id}&file_id='+f["id"]+'">'+filterXSS(script_parser(f["name"]))+'</a><br/>')
+                            }
+                        } else {
+                            toastr["error"]("文件大小限制30MB以内", "保存失败");
+                        }
+                    }
+                });
+            }}
+        };
+
+        var record_data_list = [];
+        var editor = $("#editor").xheditor({
+            plugins: allPlugin,
+            tools:'new_attachment, Cut,Copy,Pastetext,Blocktag,Fontface,FontSize,Bold,Italic,Underline,Strikethrough,FontColor,BackColor,SelectAll,Removeformat,Source,FullScreen',
+            skin:'nostyle',
+            disableContextmenu:true,
+            html5Upload:false
+        });
+        function htmlDecode(str){
+            return str.replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#039;/g, "'")
+                .replace(/&nbsp;/g, ' ');
+        }
+        function get_full_info(){
+            $.ajax({
+                url: "${SITE_URL}item/full/?group_id=${group.id}&item_id=${item.id}",
+                type: 'get',
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        // make item info
+                        var item_data = response.data['item'];
+                        $("#item-content").html(filterXSS(script_parser(htmlDecode(item_data['content']))));
+
+                        // make record info
+                        record_data_list = response.data['record'];
+                        var holds = $("#record-holds");
+                        for (var i=0;i<record_data_list.length;i++){
+                            var content = '<div class="record-head">'+
+                                '<span class="record-action" style="display:none"><a href="javascript:void(0)" onclick="record_edit('+ record_data_list[i]["record_id"] +','+ i.toString() +')">[编辑]</a></span>&nbsp;'+
+                                '<span class="record-action" style="display:none"><a href="javascript:void(0)" onclick="record_remove('+ record_data_list[i]["record_id"] +')">[删除]</a></span>&nbsp;'+
+                                '<span>创建：'+ record_data_list[i]["creator"] +'&nbsp;</span>'+
+                                '<span>'+ record_data_list[i]["create_time"] +'</span>&nbsp;&nbsp;&nbsp;'+
+                                '<span>最后更新：'+ record_data_list[i]["updater"] +'&nbsp;</span>'+
+                                '<span>'+ record_data_list[i]["update_time"] +'</span>'+
+                                '</div>'+
+                                '<div class="record-body"></div>';
+                            holds.append(content);
+                            holds.find('.record-head:last').mouseenter(function(){
+                                $(this).find('.record-action').css('display', 'inline');
+                            });
+                            holds.find('.record-head:last').mouseleave(function(){
+                                $(this).find('.record-action').css('display', 'none');
+                            });
+                            holds.find('.record-body:last').html(filterXSS(script_parser(htmlDecode(record_data_list[i]['content']))));
+                        }
+                    }
+                }
+            });
+        }
+        function clear(){
+            $("#item-content").empty();
+            $("#record-holds").empty();
+        }
+        function refresh(){
+            clear();
+            get_full_info();
+        }
+        function record_edit(record_id, index){
+            art.dialog({
+                width: 1000,
+                id: 'record-edit-dialog',
+                title: '编辑跟进',
+                content: '<div style="width:900px"><textarea id="small_editor" style="width:100%;height:200px"></textarea></div>',
+                lock: true,
+                fixed: true,
+                ok: function () {
+                    var content = filterXSS(small_editor.getSource());
+                    $.ajax({
+                        url: "${SITE_URL}record/save/",
+                        type: "post",
+                        dataType: "json",
+                        data: {
+                            content: content,
+                            record_id: record_id,
+                            item_id: ${item.id},
+                            group_id: ${group.id},
+                            type: 'update',
+                            csrfmiddlewaretoken: getCookie('csrftoken')
+                        },
+                        success: function(response){
+                            if (response.success){
+                                toastr["success"]("保存成功");
+                            } else {
+                                toastr["error"]("保存失败");
+                            }
+                            refresh();
+                        },
+                        error: function(){
+                            toastr["error"]("保存失败");
+                        }
+                    });
+                    return true;
+                },
+                okVal: '确认保存',
+                cancelVal: '取消返回',
+                cancel: function () {
+                }
+            });
+            set_button();
+            var small_editor = $("#small_editor").xheditor({
+                plugins: allPlugin,
+                tools:'new_attachment,Cut,Copy,Pastetext,Blocktag,Fontface,FontSize,Bold,Italic,Underline,Strikethrough,FontColor,BackColor,SelectAll,Removeformat,Source,FullScreen',
+                skin:'nostyle',
+                disableContextmenu:true,
+                html5Upload:false
+            });
+            small_editor.setSource(filterXSS(htmlDecode(record_data_list[index]['content'])));
+        }
+        function record_remove(record_id){
+            art.dialog({
+                width: 550,
+                id: 'record-remove-dialog',
+                title: '删除跟进',
+                content: '<p class="label-font">确认删除这条跟进吗？</p>',
+                lock: true,
+                fixed: true,
+                ok: function () {
+                    $.ajax({
+                        url: "${SITE_URL}record/remove/",
+                        type: "post",
+                        dataType: "json",
+                        data: {
+                            record_id: record_id,
+                            item_id: ${item.id},
+                            group_id: ${group.id},
+                            csrfmiddlewaretoken: getCookie('csrftoken')
+                        },
+                        success: function(response){
+                            if (response.success){
+                                toastr["success"]("删除成功");
+                            } else {
+                                toastr["error"]("删除失败");
+                            }
+                            refresh();
+                        },
+                        error: function(){
+                            toastr["error"]("删除失败");
+                        }
+                    });
+                },
+                okVal: '确认删除',
+                cancelVal: '取消返回',
+                cancel: function () {
+                }
+            });
+            set_button();
+        }
+        function add_record(){
+            var editor_holds = $("#editor-holds");
+            if (editor_holds.css('display') == 'none'){editor_holds.css('display', 'block');}else{editor_holds.css('display', 'none');}
+        }
+        $(document).ready(function(){
+            $("#editor-holds").css('display', 'none');
+            get_full_info();
+            $("#edit-item").click(function(){
+                window.location.href = '${SITE_URL}item/manager/?group_id=${group.id}&category_id=${item.category.id}&item_id=${item.id}';
+            });
+            $("#remove-item").click(function(){
+                art.dialog({
+                    width: 550,
+                    id: 'record-remove-dialog',
+                    title: '删除项目',
+                    content: '<p class="label-font">确认删除这个项目吗？</p>',
+                    lock: true,
+                    fixed: true,
+                    ok: function () {
+                        $.ajax({
+                            url: "${SITE_URL}item/remove/",
+                            type: "post",
+                            dataType: "json",
+                            data: {
+                                item_id: ${item.id},
+                                group_id: ${group.id},
+                                csrfmiddlewaretoken: getCookie('csrftoken')
+                            },
+                            success: function(response){
+                                if (response.success){
+                                    toastr["success"]("删除成功");
+                                    setTimeout('window.location.href="${SITE_URL}meeting/${group.id}/"', 1000);
+                                } else {
+                                    toastr["error"]("删除失败");
+                                }
+                            },
+                            error: function(){
+                                toastr["error"]("删除失败");
+                            }
+                        });
+                    },
+                    okVal: '确认删除',
+                    cancelVal: '取消返回',
+                    cancel: function () {
+                    }
+                });
+                set_button();
+            });
+            $("#back-item").click(function(){
+                window.location.href = "${SITE_URL}meeting/${old_url}/"
+            });
+            $("#cancel-record").click(function(){
+                var editor_holds = $("#editor-holds");
+                editor_holds.css('display', 'none');
+            });
+            $("#save-record").click(function(){
+                var content = filterXSS(editor.getSource());
+                if (!content){
+                    toastr["error"]("内容是必填项", "保存失败");
+                    return 0;
+                }
+                $("#editor-holds").css("display", "none");
+                editor.setSource('');
+                $.ajax({
+                    url: "${SITE_URL}record/save/",
+                    type: "post",
+                    dataType: "json",
+                    data: {
+                        content: content,
+                        item_id: ${item.id},
+                        group_id: ${group.id},
+                        type: 'new',
+                        csrfmiddlewaretoken: getCookie('csrftoken')
+                    },
+                    success: function(response){
+                        if (response.success){
+                            toastr["success"]("保存成功");
+                        } else {
+                            toastr["error"]("保存失败");
+                        }
+                        refresh();
+                    },
+                    error: function(){
+                        toastr["error"]("保存失败");
+                    }
+                });
+            });
+            var addition = GetURLParameter('addition');
+            if (addition === '0'){
+                $("#add-record").click();
+            }
+        });
+    </script>
+</%block>

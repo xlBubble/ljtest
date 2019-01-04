@@ -1,0 +1,33 @@
+.category-item td{
+    vertical-align: top !important;
+}
+.category-item .manager-td{
+    line-height: 1.5;
+}
+.category-item .manager-td span{
+    margin: 2px;
+}
+.rc-handle-container {
+  position: relative;
+}
+.rc-handle {
+  position: absolute;
+  width: 7px;
+  cursor: ew-resize;
+  margin-left: -3px;
+  z-index: 2;
+}
+table.rc-table-resizing {
+  cursor: ew-resize;
+}
+table.rc-table-resizing thead,
+table.rc-table-resizing thead > th,
+table.rc-table-resizing thead > th > a {
+  cursor: ew-resize;
+}
+table th:not(:last-child){
+    border-right: 3px solid #68677d;
+}
+table th:not(:first-child){
+    border-left: 3px solid #68677d;
+}

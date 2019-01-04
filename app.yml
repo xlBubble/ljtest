@@ -1,0 +1,8 @@
+app_code: bk_work_manage
+app_name: 会议管理
+author: 蓝鲸智云
+!!python/unicode 'date': '2017-11-15 17:37:39'
+introduction: 会议管理主要用于记录工作中的事项跟进和反馈意见等。可应用于个人工作记录，团队事项反馈，项目跟进等多种场景。
+is_use_celery: false
+!!python/unicode 'language': python
+version: 1.0.0

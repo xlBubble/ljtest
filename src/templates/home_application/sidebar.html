@@ -1,0 +1,731 @@
+<% import base64 %>
+<div id="wrapper-side" class="${me.theme}">
+    <div id="left-holds" class="left_side" style="overflow-y: auto;">
+        <div class="blank_top"></div>
+        <div class="left_side_inner">
+            <ul class="nav mb40">
+                % if situation != 'meeting':
+                <li>
+                    <a href="javascript:void(0)" data-target=".fast_nav" class="nav-header nav-text" data-toggle="collapse">快速导航<i class="icon icon-chevron-up pull-right mt10 mr15" data-step="1" data-intro="这里是快速导航，有一些功能在这里。" data-position="right"></i></a>
+                </li>
+                % endif
+                <li>
+                    <ul class="fast_nav nav nav-list collapse in">
+                        % if situation == 'record_manager':
+                            <li><a href="javascript:void(0)" class="bar-hover nav-text" onclick="add_record()"><i class="fa fa-plus ml15"></i>&nbsp;添加跟进</a></li>
+                        % elif situation == 'group_manager':
+                            <li><a id="meeting-list-hover" class="bar-hover nav-text" href="javascript:void(0)" onclick="change_to_list()"><i class="fa fa-list ml15"></i>&nbsp;会议列表</a></li>
+                            <li><a id="meeting-new-hover" class="bar-hover nav-text" href="javascript:void(0)" onclick="change_to_new()"><i class="fa fa-plus ml15"></i>&nbsp;新建会议</a></li>
+                        % elif situation == 'category_manage':
+                            <li><a id="category-list-hover" class="bar-hover hover nav-text" href="javascript:void(0)" onclick="change_to_cate_list()"><i class="fa fa-list ml15"></i>&nbsp;类别列表</a></li>
+                            <li><a id="category-dust-hover" class="bar-hover nav-text" href="javascript:void(0)" onclick="change_to_dustbin()"><i class="fa fa-trash ml15"></i>&nbsp;类别回收站</a></li>
+                        % endif
+                        <li><a href="${SITE_URL}meeting/${old_url}/" class="bar-hover nav-text"><i class="fa fa-reply ml15"></i>&nbsp;返回</a></li>
+                    </ul>
+                </li>
+
+                % if situation == 'meeting':
+                    <li>
+                        <a href="javascript:void(0)" data-target=".host_nav" class="nav-header" data-toggle="collapse">会议主持人<i class="icon icon-chevron-up pull-right mt10 mr15" data-step="1" data-intro="在这里你可以管理会议主持人，让大家轮流来负责会议主持工作。" data-position="right"></i></a>
+                    </li>
+                    <li>
+                        <ul class="host_nav nav nav-list collapse in">
+                            <li><span class="ml15"><span style="display:inline-block;max-width:150px;white-space: nowrap;text-overflow:ellipsis;overflow: hidden;">当前：${host['now']}</span></span></li>
+                            <li><a id="a-host-next" href="javascript:void(0)"><i class="fa fa-level-down ml15"></i>&nbsp;切换主持人</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0)" data-target=".fast_break" class="nav-header" data-toggle="collapse">快速跳转<i class="icon icon-chevron-up pull-right mt10 mr15" data-step="2" data-intro="在这里可以快速定位到会议类别项。" data-position="right"></i></a>
+                    </li>
+                    <li>
+                        <ul class="fast_break nav nav-list collapse in">
+                            <% index = 0 %>
+                            % for c in category:
+                                <% index += 1 %>
+                                <li><a id="go-category-${c['id']}" href="javascript:void(0)"><span class="ml20" style="font-size:14px">${index} </span>
+                                    <span style="display:inline-block;max-width:120px;white-space: nowrap;text-overflow:ellipsis;overflow: hidden;">&nbsp;${base64.b64decode(c['name']).decode('utf-8')}</span>
+                                </a></li>
+                                <script>
+                                    $("#go-category-${c['id']}").click(function(){
+                                        $('html, body').animate({
+                                            scrollTop: $("#category-${c['id']}").offset().top - 100
+                                        }, 100);
+                                    });
+                                </script>
+                            % endfor
+                        </ul>
+                    </li>
+                    % if is_manager:
+                        <li>
+                            <a href="javascript:void(0)" data-target=".manager_func" class="nav-header" data-toggle="collapse">会议管理<i class="icon icon-chevron-up pull-right mt10 mr15" data-step="3" data-intro="由于你是会议管理员，还拥有人员管理的权限！" data-position="right"></i></a>
+                        </li>
+                        <li>
+                            <ul class="manager_func nav nav-list collapse">
+                                <li>
+                                    <a id="a-group-manager" href="javascript:void(0)"><i class="fa fa-user ml15"></i>&nbsp;成员管理</a>
+                                </li>
+                                <li>
+                                    <a id="a-host-manager" href="javascript:void(0)"><i class="fa fa-gear ml15"></i>&nbsp;主持人管理</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0)" data-target=".category_func" class="nav-header" data-toggle="collapse">类别管理<i class="icon icon-chevron-up pull-right mt10 mr15" data-step="4" data-intro="以及类别管理的权限！" data-position="right"></i></a>
+                        </li>
+                        <li>
+                            <ul class="category_func nav nav-list collapse">
+                                <li>
+                                    <a id="a-category-add" href="javascript:void(0)" ><i class="fa fa-plus ml15"></i>&nbsp;新增类别</a>
+                                </li>
+                                <li>
+                                    <a id="a-category-sort" href="javascript:void(0)"><i class="fa fa-sort-amount-desc ml15"></i>&nbsp;类别排序</a>
+                                </li>
+                                <li>
+                                    <a id="a-category-combine" href="javascript:void(0)"><i class="fa fa-cubes ml15"></i>&nbsp;类别合并</a>
+                                </li>
+                                <li>
+                                    <a id="a-category-recycle" href="javascript:void(0)"><i class="fa fa-trash ml15"></i>&nbsp;类别回收站</a>
+                                </li>
+                            </ul>
+                        </li>
+                    % endif
+                % endif
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function set_button(){
+        var buttons = $(".aui_buttons").find('button');
+            buttons.css({'border-radius': '0', 'border': '0', 'background-image': 'none', 'padding': '10px', 'margin-left': '10px', 'text-shadow': 'none'});
+            buttons.removeClass();
+            buttons.eq(0).addClass('btn btn-info');
+            buttons.eq(1).addClass('btn btn-default');
+            buttons.eq(1).css('background', '#CCD1D1');
+    }
+    function raise_danger(pre, text){
+        var danger_name = "#" + pre + "-top-bar-danger";
+        var success_name = "#" + pre + "-top-bar-success";
+        var danger = $(danger_name);
+        var success = $(success_name);
+        danger.find('span').text(text);
+        success.css('display', 'none');
+        danger.css('display', 'block');
+    }
+    function raise_success(pre, text){
+        var danger_name = "#" + pre + "-top-bar-danger";
+        var success_name = "#" + pre + "-top-bar-success";
+        var danger = $(danger_name);
+        var success = $(success_name);
+        success.find('span').text(text);
+        danger.css('display', 'none');
+        success.css('display', 'block');
+    }
+    % if situation == 'meeting':
+        $("#a-group-manager").click(function(){
+            window.location.href = "${SITE_URL}group/manager/?group_id=${group.id}&old_url=${group.id}";
+        });
+        function host_manager(order, now){
+            $.ajax({
+                url: "${SITE_URL}host/save/",
+                type: "post",
+                data: {
+                    order: order,
+                    now: now,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        //raise_success('host', "主持人保存成功");
+                        window.location.reload();
+                    } else {
+                        raise_danger('host', response.info);
+                    }
+                },
+                error: function(){
+                    raise_danger('host', "操作失败");
+                }
+            });
+        }
+        function host_next(){
+            $.ajax({
+                url: "${SITE_URL}host/next/",
+                type: "post",
+                data: {
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        toastr["success"]("轮转成功");
+                        setTimeout("window.location.reload()", 1000);
+                    }
+                },
+                error: function(){
+                }
+            });
+        }
+        function category_add(name, show_count, describe){
+            $.ajax({
+                url: "${SITE_URL}category/add/",
+                type: "post",
+                data: {
+                    name: name,
+                    show_count: show_count,
+                    describe: describe,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        //raise_success('category', "类别 "+ name +" 创建成功");
+                        window.location.reload();
+                    } else {
+                        raise_danger('category', response.info);
+                    }
+                },
+                error: function(){
+                    raise_danger('category', "操作失败");
+                }
+            });
+        }
+        function category_sort(order){
+            $.ajax({
+                url: "${SITE_URL}category/sort/",
+                type: "post",
+                data: {
+                    order: order,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        //raise_success('sort', '顺序保存成功');
+                        window.location.reload();
+                    } else {
+                        raise_danger('sort', response.info);
+                    }
+                },
+                error: function(){
+                    raise_danger('sort', "操作失败");
+                }
+            });
+        }
+        function category_combine(name, order){
+            $.ajax({
+                url: "${SITE_URL}category/combine/",
+                type: "post",
+                data: {
+                    name: name,
+                    order: order,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        //raise_success('combine', '合并操作成功');
+                        window.location.reload();
+                    } else {
+                        raise_danger('combine', response.info);
+                    }
+                },
+                error: function(){
+                    raise_danger('combine', "操作失败");
+                }
+            });
+        }
+        function category_recycle(name, category_id){
+            $.ajax({
+                url: "${SITE_URL}category/recycle/",
+                type: "post",
+                data: {
+                    category_id: category_id,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        //raise_success('recycle', '类别 '+ name +' 还原成功');
+                        window.location.reload();
+                    } else {
+                        raise_danger('recycle', response.info);
+                    }
+                },
+                error: function(){
+                    raise_danger('recycle', "操作失败");
+                }
+            });
+        }
+        $("#a-host-manager").click(function(){
+            art.dialog({
+                width: 350,
+                id: 'host-manager-dialog',
+                title: '管理主持人',
+                content: '<div style="width:450px;">'+
+                '<div id="host-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none"><span style="width:90%">危险提示相关信息!</span><div id="host-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div id="host-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none"><span>成功！</span><div id="host-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div class="king-notice2 king-notice-info notice-borders" style="margin-top:10px"><i class="fa fa-info-circle"></i><div class="notice-text"><p>上下拖动成员，决定主持人顺序；左侧的按钮表示当前主持人，右侧的按钮表示是否参与。</p></div></div>'+
+                '<hr>'+
+                '<div class="host-title label-font" style="margin-right:10px;"><span>&nbsp;主持人列表</span></div>'+
+                '<div id="host-manager-holds" style="overflow-y: auto;max-height:220px">'+
+                '<div id="plugin6_demo3" class="plugin6_demo" style="min-height:200px;margin-top:20px;overflow:visible">'+
+                    '<ul id="sortable1" class="connectedSortable" style="overflow:auto;width:250px">'+
+                        % for h in host['list']:
+                            % if h == host['now']:
+                                '<li class="ui-state-default" style="cursor:move"><span style="display:inline-block;width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h}</span><input type="checkbox" style="display:inline-block" class="js-switch-small fr" checked="checked"><input type="radio" name="host-now-radio" style="display:inline-block" class="js-switch-now fr" checked></li>'+
+                            % else:
+                                '<li class="ui-state-default" style="cursor:move"><span style="display:inline-block;width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h}</span><input type="checkbox" style="display:inline-block" class="js-switch-small fr" checked="checked"><input type="radio" name="host-now-radio" style="display:inline-block" class="js-switch-now fr"></li>'+
+                            % endif
+                        % endfor
+                        % for m in members:
+                            % if m.username not in host['list']:
+                                '<li class="ui-state-default ui-state-disabled" style="cursor:move"><span style="display:inline-block;width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.username}</span><input type="checkbox" style="display:inline-block" class="js-switch-small fr"><input type="radio" name="host-now-radio" style="display:inline-block" class="js-switch-now fr" disabled=""></li>'+
+                            % endif
+                        % endfor
+                    '</ul>'+
+                '</div></div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: '确认保存',
+                        callback: function(){
+                            var hosts = $("#sortable1").find('.ui-state-default:not(".ui-state-disabled")');
+                            var order = [];
+                            for (var i=0;i<hosts.length;i++){
+                                order.push(hosts.eq(i).text());
+                            }
+                            if (order.length === 0){
+                                raise_danger('host', "主持人列表不能为空");
+                                return false;
+                            }
+                            var checked = $(".js-switch-now:checked");
+                            if (checked.length == 0){
+                                raise_danger('host', "请选择当前主持人");
+                                return false;
+                            }
+                            var now = checked.parents('li').text();
+                            host_manager(order, now);
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: '取消返回',
+                        callback: function(){
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            $('.js-switch-now').iCheck({
+                radioClass: 'iradio_flat-blue'
+            });
+            var elems = Array.prototype.slice.call(document.querySelectorAll('.js-switch-small'));
+            elems.forEach(function(small) {
+                var switchery = new Switchery(small, {size: 'small'});
+                $(small).on('change', function(){
+                    var checked = small.checked;
+                    var li = $(small).parents('li');
+                    if (checked){
+                        li.removeClass('ui-state-disabled');
+                        li.find('.js-switch-now').iCheck('enable');
+                        var first_disabled = $(".ui-state-disabled").eq(0);
+                        $(li).insertBefore(first_disabled);
+                    }else{
+                        li.addClass('ui-state-disabled');
+                        li.find('.js-switch-now').iCheck('disable');
+                        li.find('.js-switch-now').iCheck('uncheck');
+                        var last_able = $('.ui-state-default:not(".ui-state-disabled"):last');
+                        $(li).insertAfter(last_able);
+                    }
+                    $("#sortable1").sortable('destroy').sortable({
+                        items: "li:not(.ui-state-disabled)"
+                    }).disableSelection();
+                })
+            });
+            $(".switchery").addClass('fr');
+
+            $("#sortable1").sortable({
+                items: "li:not(.ui-state-disabled)"
+            }).disableSelection();
+            $("#host-manager-holds").mCustomScrollbar({
+                setHeight: 350,
+                theme:"minimal-dark"
+            });
+            $("#host-top-bar-danger-x").click(function(){
+                $("#host-top-bar-danger").css('display', 'none');
+            });$("#host-top-bar-success-x").click(function(){
+                $("#host-top-bar-success").css('display', 'none');
+            });
+        });
+        $("#a-host-next").click(function(){
+            art.dialog({
+                width: 550,
+                id: 'host-manager-dialog',
+                title: '下一个主持人',
+                content: '<p style="font-size: 20px">确认轮转到下一个主持人 <span style="color: #666fff;font-size: 15px">${host['next']}</span> 吗？</p>',
+                lock: true,
+                fixed: true,
+                ok: function () {
+                    host_next();
+                },
+                okVal: '确认轮转',
+                cancelVal: '取消返回',
+                cancel: function () {
+                }
+            });
+            set_button();
+        });
+        $("#a-category-add").click(function(){
+            art.dialog({
+                width: 550,
+                id: 'category-manager-dialog',
+                title: '新增类别',
+                content:
+                '<div id="category-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="category-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                +'<div id="category-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="category-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                + '<div class="king-notice2 king-notice-info notice-borders"><i class="fa fa-info-circle"></i><div class="notice-text"><p>新增一个分类类别，不能与现有名字冲突。</p></div></div>'
+                +'<div class="form-horizontal" style="margin-top:10px;width:450px">'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>类别名称:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="category-name" type="text" class="input-large"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>跟进展示数:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="category-showcount" value="1" type="number" class="input-large"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>类别说明:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><textarea id="category-describe" type="text" style="max-width:210px"></textarea></div></div>'
+                + '</div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: "确认创建",
+                        callback: function(){
+                            var show_holds = $("#category-showcount");
+                            var name = $("#category-name").val();
+                            var show_count = show_holds.val();
+                            var describe = $("#category-describe").val();
+                            if (!check_name_format(name)) {
+                                raise_danger('category', '类别名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等');
+                                return false;
+                            }
+                            if (isNaN(show_count) || !(parseInt(show_count) >= 0)){
+                                raise_danger('category', '跟进展示数是必填项，且为非负整数');
+                                return false;
+                            }
+                            show_holds.val(parseInt(show_count));
+                            category_add(name, show_count, describe);
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: "取消返回",
+                        callback: function(){
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            $("#category-top-bar-danger-x").click(function(){
+                $("#category-top-bar-danger").css('display', 'none');
+            });$("#category-top-bar-success-x").click(function(){
+                $("#category-top-bar-success").css('display', 'none');
+            });
+        });
+        $("#a-category-sort").click(function(){
+            art.dialog({
+                width: 300,
+                id: 'category-host-dialog',
+                title: '排序类别',
+                content: '<div style="width:250px;">'+
+                '<div id="sort-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="sort-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div id="sort-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="sort-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div class="king-notice2 king-notice-info notice-borders"><i class="fa fa-info-circle"></i><div class="notice-text"><p>上下拖动类别，确定展示的顺序。</p></div></div>'+
+                '<div id="category-sort-holds" style="width:250px;overflow-y: auto;">'+
+                '<div class="host-title label-font" style="margin-top:10px;display:block;width:auto;"><span>&nbsp;类别列表&nbsp;</span><span style="font-size:15px;color:#666fff">(拖动排序)</span></div>'+
+                '<div id="plugin6_demo3" class="plugin6_demo" style="width:0px;min-height:300px;margin-top:20px;overflow:visible">'+
+                    '<ul id="sortable1" class="connectedSortable" style="overflow:auto;margin-left:28%;width:250px">'+
+                        % for c in category:
+                            '<li class="ui-state-default" data-cid="${c['id']}" style="cursor:move">${base64.b64decode(c['name']).decode('utf-8')}</li>'+
+                        % endfor
+                    '</ul>'+
+                '</div></div></div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: "确认保存",
+                        callback: function(){
+                            var categories = $("#sortable1").find('li');
+                            var order = [];
+                            for (var i=0;i<categories.length;i++){
+                                order.push(categories.eq(i).data("cid"));
+                            }
+                            category_sort(order);
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: "取消返回",
+                        callback: function(){
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            $("#category-sort-holds").mCustomScrollbar({
+                setHeight: 350,
+                theme:"minimal-dark"
+            });
+            $("#sortable1").sortable({
+                dropOnEmpty: true
+            });
+            $("#sort-top-bar-danger-x").click(function(){
+                $("#sort-top-bar-danger").css('display', 'none');
+            });$("#sort-top-bar-success-x").click(function(){
+                $("#sort-top-bar-success").css('display', 'none');
+            });
+        });
+        $("#a-category-combine").click(function(){
+            art.dialog({
+                width: 550,
+                id: 'category-combine-dialog',
+                title: '合并类别',
+                content: '<div style="width:450px;">'+
+                '<div id="combine-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="combine-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div id="combine-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="combine-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div class="king-notice2 king-notice-info notice-borders""><i class="fa fa-info-circle"></i><div class="notice-text"><p>选择若干个类别，合并为一个新的。它们下面的项目会归到新的类别中去。原有类别会被删除，你可以在回收站中找到它们。</p></div></div>'+
+                '<div class="form-horizontal" style="margin-top:10px;width:450px">'+
+                '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>合并的新名称:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="new-category-name" type="text" class="input-large"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'+
+                '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>选择合并类别:&nbsp;&nbsp;</span></label><div class="controls sidebar-sumo" style="margin-left:110px;">'+
+                '<select id="old-category-list" multiple="multiple" style="width:200px;line-height:22px">'+
+                % for c in category:
+                    '<option id="option-combine-${c['id']}" value="${c['id']}"></option>'+
+                % endfor
+                '</select>'+
+                '<span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'+
+                '</div>'+
+                '<div id="category-box"></div>'+
+                '</div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: "确认合并",
+                        callback: function(){
+                            var name = $("#new-category-name").val();
+                            if (!check_name_format(name)){
+                                raise_danger('combine', '类别名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等');
+                                return false;
+                            }
+                            if (category_idlist.length<2){
+                                raise_danger('combine', '至少选择2个类别合并');
+                                return false;
+                            }
+                            category_combine(name, category_idlist);
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: "取消返回",
+                        callback: function(){
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            % for c in category:
+                $("#option-combine-${c['id']}").text(decodeURIComponent(escape(atob("${c['name']}"))));
+            % endfor
+            var group_category = $("#old-category-list");
+            var category_namelist = [];
+            var category_idlist = [];
+            group_category.SumoSelect({
+                okCancelInMulti: false,
+                selectAll: true,
+                placeholder: "选择类别",
+                captionFormat: '{0} 个类别',
+                captionFormatAllSelected: '{0} 个类别 全选',
+                search: true,
+                searchText: "搜索"
+            });
+            group_category.bind('change', function (event) {
+                category_namelist = [];
+                category_idlist = group_category.val();
+                group_category.parents('div').eq(0).find("li").each(function () {
+                    if ($(this).hasClass("selected")) {
+                        var text = $("#old-category-list").find('option').eq($(this).index()).text();
+                        category_namelist.push(text);
+                    }
+                });
+                var category_box = $('#category-box');
+                category_box.empty();
+                if (category_namelist.length) {
+                    var html = '';
+                    for (var i=0; i<category_namelist.length; i++) {
+                        html += '<span class="selected_mentor label label-info">' + category_namelist[i] + '</span>';
+                    }
+                    category_box.append(html);
+                }
+            });
+            $("#combine-top-bar-danger-x").click(function(){
+                $("#combine-top-bar-danger").css('display', 'none');
+            });$("#combine-top-bar-success-x").click(function(){
+                $("#combine-top-bar-success").css('display', 'none');
+            });
+        });
+        $("#a-category-recycle").click(function() {
+            art.dialog({
+                width: 550,
+                id: 'category-recycle-dialog',
+                title: '还原类别',
+                content: '<div style="width:450px;">' +
+                '<div id="recycle-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="recycle-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>' +
+                '<div id="recycle-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="recycle-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>' +
+                '<div class="king-notice2 king-notice-info notice-borders"><i class="fa fa-info-circle"></i><div class="notice-text"><p>还原一个被删除或被合并的类别，删除/合并前属于它的项目将会被归到这个类别下。</p></div></div>'+
+                '<div class="form-horizontal" style="margin-top:10px;width:450px">' +
+                '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>选择还原类别:&nbsp;&nbsp;</span></label><div class="controls sidebar-sumo" style="margin-left:110px;">' +
+                '<select id="disable-category-list" style="width:200px;line-height: 22px">' +
+                    % for d in dustbin:
+                        '<option id="option-recycle-${d['id']}" value="${d['id']}"></option>'+
+                    % endfor
+                '</select>' +
+                '<span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>' +
+                '</div>' +
+                '<div id="category-box"></div>' +
+                '</div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: "确认还原",
+                        callback: function () {
+                            var holds = $("#disable-category-list");
+                            var category_id = holds.val();
+                            var name = holds.find('option[value='+category_id+']').text();
+                            if (category_id == null || isNaN(category_id)){
+                                raise_danger('recycle', '请选择一个类别');
+                                return false;
+                            }
+                            category_recycle(name, category_id);
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: "取消返回",
+                        callback: function () {
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            % for d in dustbin:
+                $("#option-recycle-${d['id']}").text(decodeURIComponent(escape(atob("${d['name']}"))));
+            % endfor
+            $("#disable-category-list").SumoSelect({
+                placeholder: "选择类别",
+                search: true,
+                searchText: "搜索"
+            });
+            $("#recycle-top-bar-danger-x").click(function(){
+                $("#recycle-top-bar-danger").css('display', 'none');
+            });$("#recycle-top-bar-success-x").click(function(){
+                $("#recycle-top-bar-success").css('display', 'none');
+            });
+        });
+    % endif
+
+    % if situation == 'group_manager':
+        function add_user(){
+            art.dialog({
+                width: 550,
+                id: 'add-user-dialog',
+                title: '新增用户',
+                content: '<div id="add-user-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="add-user-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                +'<div id="add-user-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="add-user-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                + '<div class="king-notice2 king-notice-info notice-borders"><i class="fa fa-info-circle"></i><div class="notice-text"><p>输入对方的用户名，点击添加到下拉列表中。请注意拼写，需要完全一致。</p></div></div>'
+                +'<div class="form-horizontal" style="margin-top:10px;width:450px">'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>用户名:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="user-name" type="text" class="input-large" value="" style="width:180px"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                + '</div>',
+                lock: true,
+                fixed: true,
+                ok: function () {
+                    var name =$("#user-name").val();
+                    if (!check_name_format(name)){
+                        raise_danger('add-user', '用户名是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等');
+                        return false;
+                    }
+                    $.ajax({
+                        url: "${SITE_URL}member/add/",
+                        type: 'post',
+                        dataType: 'json',
+                        data: {
+                            csrfmiddlewaretoken: getCookie('csrftoken'),
+                            name: name
+                        },
+                        success: function(response){
+                            if (response.success){
+                                var content = '<option value="'+ response.data +'">'+ response.data + '</option>';
+
+                                var group_manager = $("#group-manager");
+                                var group_member = $("#group-member");
+                                var group_focus = $("#group-focus");
+                                group_manager.append(content);
+                                group_manager[0].sumo.reload();
+                                group_member.append(content);
+                                group_member[0].sumo.reload();
+                                group_focus.append(content);
+                                group_focus[0].sumo.reload();
+                                //raise_success('add-user', '添加成功');
+                                window.location.reload();
+                            } else {
+                                raise_danger('add-user', response.info);
+                            }
+                        },
+                        error: function(){
+                            raise_danger('add-user', '添加失败')
+                        }
+                    });
+                    return false;
+                },
+                okVal: '确认添加',
+                cancelVal: '取消返回',
+                cancel: function () {
+                }
+            });
+            set_button();
+            $("#add-user-top-bar-danger-x").click(function(){
+                $("#add-user-top-bar-danger").css('display', 'none');
+            });$("#add-user-top-bar-success-x").click(function(){
+                $("#add-user-top-bar-success").css('display', 'none');
+            });
+        }
+    % endif
+
+    $(function ($) {
+        $('.nav-header').click(function () {
+            var $_me = $(this);
+            if ($_me.attr('data-toggle') == 'collapse' && $($_me.attr('data-target')).hasClass('in')) {
+                $_me.find('.icon').removeClass('icon-chevron-up').addClass('icon-chevron-down');
+            } else {
+                $_me.find('.icon').removeClass('icon-chevron-down').addClass('icon-chevron-up');
+            }
+        });
+        $("#left-holds").mCustomScrollbar({
+            theme:"minimal-dark"
+        });
+    })
+</script>

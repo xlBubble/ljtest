@@ -1,0 +1,405 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+    ${parent.head()}
+    <link href="${STATIC_URL}css/build_item.css" rel="stylesheet">
+    <link href="${STATIC_URL}css/sumoselect.css" rel="stylesheet">
+    <link href="${STATIC_URL}uploadify/uploadify.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/jquery.sumoselect.min.js"></script>
+    <link href="${STATIC_URL}css/toastr.min.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/toastr.min.js"></script>
+    <script src="${STATIC_URL}xheditor-1.2.2/xheditor-1.2.2.min.js"></script>
+    <script src="${STATIC_URL}xheditor-1.2.2/xheditor_lang/zh-cn.js"></script>
+    <script src="${STATIC_URL}uploadify/jquery.uploadify-3.1.min.js"></script>
+    <script src="${STATIC_URL}uploadify/jquery.uploadify-3.1.min.js"></script>
+    <script src="${STATIC_URL}js/jquery.fileupload.js"></script>
+    <script src="${STATIC_URL}js/jquery.ui.widget.js"></script>
+    <style>
+        .xh_attachment{
+            background: transparent url(${STATIC_URL}img/attach.gif) no-repeat 16px 16px;
+            background-position: 2px 2px;
+        }
+    </style>
+</%block>
+
+<%block name="content">
+    <%include file="sidebar.html"/>
+    <% import base64 %>
+    <div class="holds" style="padding-top:100px;padding-bottom: 100px;">
+        <div id="hd" class="king-page-topbar pl20 pr20 clearfix project-nav" data-step="5" data-intro="这里是导航，包含会议组的名字。" data-position="bottom">
+            <ul class="breadcrumb king-breadcrumb pl0 bg-transparent" style="border:0;text-align: left;">
+                <li><a href="${SITE_URL}">首页</a></li>
+                <li><a href="${SITE_URL}meeting/${data['group'].id}/">${data['group'].name}</a></li>
+                <li class="active">${header}</li>
+            </ul>
+        </div>
+        <div id="form-holds" style="margin:20px 0 100px 200px;">
+            <form id="item-form" method="post" action="${SITE_URL}item/save/" class="form-horizontal">
+                % if data['new']:
+                    <input type="hidden" name="type" value="new" />
+                % else:
+                    <input type="hidden" name="type" value="update" />
+                    <input type="hidden" name="item_id" value="${data['item'].id}" />
+                    <input type="hidden" name="category_id" value="${data['category'].id}" />
+                % endif
+                <input type="hidden" name="group_id" value="${group.id}" />
+                <input class="csrf-input" type="hidden" name="csrfmiddlewaretoken" value="" />
+                <div class="form-group" style="width:400px;margin:20px" data-step="2" data-intro="输入项目名称，长度不超过50个字符。" data-position="right">
+                    <label for="item-name" class="control-label label-font">项目名称：</label>
+                    % if data['new']:
+                        <input name="name" type="text" id="item-name" placeholder="输入项目名称" style="width:190px">
+                    % else:
+                        <input name="name" type="text" id="item-name" placeholder="输入项目名称" style="width:190px">
+                        <script>
+                            $(document).ready(function(){
+                                $("#item-name").val(htmlDecode(decodeURIComponent(escape(atob('${base64.b64encode(data['item'].name.encode("utf-8"))}')))));
+                            });
+                        </script>
+                    % endif
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div class="form-group" style="width:800px;margin:20px;" data-step="3" data-intro="项目的详细描述，如需求、初期规划等。" data-position="right">
+                    <label for="item-content" class="control-label label-font">描述：</label>
+                    % if data['new']:
+                        <textarea name="content" id="item-content" style="width:600px;min-height:200px"></textarea>
+                    % else:
+                        <textarea name="content" id="item-content" style="width:600px;min-height:200px">${data['item'].content}</textarea>
+                    % endif
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div class="form-group" style="width:400px;margin:20px" data-step="4" data-intro="选择项目所属的分类，会在会议中该分类下展示，过后也可以更改。" data-position="right">
+                    <label for="item-group" class="control-label label-font">所属分类：</label>
+                    <select name="category_id" title="" id="item-category"></select>
+                    <span class="text-danger mt5 fr">*</span>
+                    <select name="group_id" id="item-group" style="display: none;">
+                        % for g in groups:
+                            % if g['id'] == group.id:
+                                <option id="g-${g['id']}" value="${g['id']}" selected></option>
+                                <script>
+                                    $(document).ready(function(){
+                                        get_category_list(${g['id']});
+                                    });
+                                </script>
+                            % else:
+                                <option id="g-${g['id']}" value="${g['id']}"></option>
+                            % endif
+                            <script>
+                                $("#g-${g['id']}").text(decodeURIComponent(escape(atob("${g['name']}"))));
+                            </script>
+                        % endfor
+                    </select>
+                </div>
+                <%
+                    manager_index = 0
+                    member_index = 0
+                    manager_index_list = []
+                    member_index_list = []
+                %>
+
+                <div class="form-group" style="width:400px;margin:20px" data-step="5" data-intro="项目负责人。" data-position="right">
+                    <label for="item-manager" class="control-label label-font">负责人：</label>
+                    <select name="manager" title="" multiple="multiple" id="item-manager">
+                        <% index = 0 %>
+                        % for m in members:
+                            % if m.username == me.username:
+                                <% manager_index = index %>
+                            % endif
+                            % if not data['new'] and m.username in data['manager']:
+                                <% manager_index_list.append(index) %>
+                            % endif
+                            <option value="${m.username}">${m.username}</option>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div id="item-manager-box" class="selected_box"></div>
+                <div class="form-group" style="width:400px;margin:20px" data-step="6" data-intro="项目成员。" data-position="right">
+                    <label for="item-member" class="control-label label-font">成员：</label>
+                    <select name="member" title="" multiple="multiple" id="item-member">
+                        <% index = 0 %>
+                        % for m in members:
+                            % if m.username == me.username:
+                                <% member_index = index %>
+                            % endif
+                            % if not data['new'] and m.username in data['member']:
+                                <% member_index_list.append(index) %>
+                            % endif
+                            <option value="${m.username}">${m.username}</option>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div id="item-member-box" class="selected_box"></div>
+                <div class="form-group" style="width:200px;margin:40px;margin-left:187px">
+                    <span id="confirm" class="btn btn-large btn-success" style="margin-right:10px">确认保存</span>
+                    <span id="cancel" class="btn btn-large btn-default" style="background:#CCD1D1;">取消返回</span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div style="display:none" >
+        <textarea title="" id="parser"></textarea>
+    </div>
+    <script>
+        function htmlDecode(str){
+            return str.replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#039;/g, "'")
+                .replace(/&nbsp;/g, ' ');
+        }
+        var parser = $("#parser").xheditor({
+            skin:'nostyle',
+            disableContextmenu:true,
+            html5Upload:false
+        });
+        function script_parser(data){
+            parser.setSource(filterXSS(data));
+            return parser.getSource();
+        }
+        var allPlugin={
+            new_attachment:{c:'xh_attachment',t:'上传附件', h:1,e:function(){
+                var _this=this;
+                var jTest=$('<div style="width:300px;height:100px;overflow:auto;"><span class="btn btn-info" id="upload_btn">上传</span><input type="file" name="file" id="file_upload1" data-url="${SITE_URL}file/put/" style="display:none"/></div>');
+                _this.saveBookmark();
+                _this.showDialog(jTest);
+                $("#upload_btn").click(function(){
+                    $("#file_upload1").click();
+                });
+                $("#file_upload1").fileupload({
+                    formData: {"csrfmiddlewaretoken": getCookie('csrftoken'), "group_id": "${group.id}"},
+                    dataType: 'json',
+                    add: function (e, data) {
+                        if (data.files[0].size > 1024*1024*30){
+                            toastr["error"]("文件大小限制30MB以内", "保存失败");
+                        } else {
+                            data.submit();
+                        }
+                        _this.hidePanel();
+                    },
+                    done: function (e, data){
+                        var obj_data = data.result;
+                        _this.loadBookmark();
+                        if (obj_data['success']){
+                            var f = obj_data['data'];
+
+                            if(f['ext']=="png" || f['ext']=="jpg" || f['ext']=="gif" || f['ext'] == "bmp"){
+                                _this.pasteHTML('<img style="max-width:500px" src="${SITE_URL}file/get/?group_id=${group.id}&file_id='+f["id"]+'"/><br/>')
+                            }else{
+                                _this.pasteHTML('<img src="${STATIC_URL}img/page.gif" width="16" height="16"/><a href="${SITE_URL}file/get/?group_id=${group.id}&file_id='+f["id"]+'">'+filterXSS(script_parser(f["name"]))+'</a><br/>')
+                            }
+                        } else {
+                            toastr["error"]("文件大小限制30MB以内", "保存失败");
+                        }
+                    }
+                });
+            }}
+        };
+
+        var editor = $("#item-content").xheditor({
+            plugins: allPlugin,
+            tools:'new_attachment,Cut,Copy,Pastetext,Blocktag,Fontface,FontSize,Bold,Italic,Underline,Strikethrough,FontColor,BackColor,SelectAll,Removeformat,Source,FullScreen',
+            skin:'nostyle',
+            disableContextmenu:true,
+            html5Upload:false
+        });
+        var item_group = $("#item-group");
+        var item_category = $("#item-category");
+        var item_manager = $("#item-manager");
+        var item_member = $("#item-member");
+        item_group.SumoSelect({
+            placeholder: "选择组",
+            search: true,
+            searchText: "搜索"
+        });
+        item_group.parents('.SumoSelect').find('li').click(function(){
+            var text = item_group.find('option').eq($(this).index()).text();
+            change_category(text);
+        });
+        item_group.parents('.SumoSelect').css('display', 'none');
+        item_category.SumoSelect({
+            placeholder: "选择类别",
+            search: true,
+            searchText: "搜索"
+        });
+        item_manager.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择负责人",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        item_member.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择成员",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        item_manager.bind('change', function(event){
+            var item_manager_namelist = [];
+            item_manager.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    item_manager_namelist.push($(this)[0].innerText);
+                }
+            });
+            var item_manager_box = $('#item-manager-box');
+            item_manager_box.empty();
+            if (item_manager_namelist.length) {
+                var html = '';
+                for (var i=0; i<item_manager_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-info" style="white-space: normal;">' + item_manager_namelist[i] + '</span>';
+                }
+                item_manager_box.append(html);
+            }
+        });
+        item_member.bind('change', function(event){
+            var item_member_namelist = [];
+            item_member.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    item_member_namelist.push($(this)[0].innerText);
+                }
+            });
+            var item_member_box = $('#item-member-box');
+            item_member_box.empty();
+            if (item_member_namelist.length) {
+                var html = '';
+                for (var i=0; i<item_member_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-success" style="white-space: normal;">' + item_member_namelist[i] + '</span>';
+                }
+                item_member_box.append(html);
+            }
+        });
+        function change_category(text){
+            var item_group = $("#item-group");
+            var options = item_group.find('option');
+            var group_id = 0;
+            for (var i=0;i<options.length;i++){
+                if (options.eq(i).text() == text){
+                    group_id = options.eq(i).val();
+                    break;
+                }
+            }
+            get_category_list(group_id);
+        }
+        function clear_category_list(){
+            var item_category = $("#item-category");
+            var num = item_category.find('option').length;
+            for (var j=0;j<num;j++){
+                item_category[0].sumo.remove(0);
+            }
+        }
+        function get_category_list(group_id){
+            var item_category = $("#item-category");
+            $.ajax({
+                url: "${SITE_URL}category/get/?group_id=" + group_id,
+                type: 'get',
+                dataType: 'json',
+                success: function(response){
+                    var data = response.data;
+                    clear_category_list();
+                    for (var i=0;i<data.length;i++) {
+                        var option = '<option id="'+ data[i]['id'] +'" value="'+ data[i]['id'] +'"></option>';
+                        item_category.append(option);
+                        $("#"+data[i]['id']).text(decodeURIComponent(escape(atob(data[i]['name']))));
+                        item_category[0].sumo.reload();
+                    }
+                    set_category_list(${category.id});
+                },
+                error: function(response){
+                    clear_category_list();
+                }
+            });
+        }
+        function set_category_list(category_id){
+            var item_category = $("#item-category");
+            var options = item_category.find('option');
+            var index = 0;
+            for (var i=0;i<options.length;i++){
+                if (options.eq(i).val() == category_id){
+                    index = i;
+                    break;
+                }
+            }
+            item_category[0].sumo.unSelectAll();
+            item_category[0].sumo.selectItem(index);
+        }
+        function check_params(){
+            var name = $("#item-name").val();
+            var content = editor.getSource();
+            var group_id = $("#item-group").val();
+            var category_id = $("#item-category").val();
+            var manager = $("#item-manager").val();
+            var member = $("#item-member").val();
+            if (!check_name_format(name)){
+                toastr["error"]("项目名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等");
+                return false;
+            }
+            if (!content){
+                toastr["error"]("描述信息是必填项", "保存失败");
+                return false;
+            }
+            if (isNaN(group_id) || isNaN(category_id)){
+                toastr["error"]("请选择所属分类", "保存失败");
+                return false;
+            }
+            if (!manager){
+                toastr["error"]("请选择负责人", "保存失败");
+                return false;
+            }
+            return true;
+        }
+        $("#confirm").click(function(){
+            if (check_params()){
+                editor.setSource(filterXSS(editor.getSource()));
+                % if data['new']:
+                    $(".csrf-input").val(getCookie('csrftoken'));
+                    $("#item-form").submit();
+                % else:
+                    var content = '<p class="label-font">确认保存更改吗？</p>';
+                    art.dialog({
+                        width: 550,
+                        id: 'show-dialog',
+                        title: '保存确认',
+                        content: content,
+                        lock: true,
+                        fixed: true,
+                        ok: function () {
+                            $(".csrf-input").val(getCookie('csrftoken'));
+                            $("#item-form").submit();
+                        },
+                        okVal: '确认保存',
+                        cancelVal: '取消返回',
+                        cancel: function () {
+                        }
+                    });
+                    set_button();
+                % endif
+            }
+        });
+        $("#cancel").click(function(){
+            window.history.go(-1);
+        });
+        $(document).ready(function(){
+            % if data['new']:
+                item_manager[0].sumo.selectItem(${manager_index});
+                item_member[0].sumo.selectItem(${member_index});
+                item_group[0].sumo.disable();
+            % else:
+                % for d in manager_index_list:
+                    item_manager[0].sumo.selectItem(${d});
+                % endfor
+                % for d in member_index_list:
+                    item_member[0].sumo.selectItem(${d});
+                % endfor
+                item_group[0].sumo.disable();
+                item_category[0].sumo.disable();
+            % endif
+        });
+    </script>
+</%block>

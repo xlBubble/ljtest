@@ -1,0 +1,565 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+    ${parent.head()}
+    <link href="${STATIC_URL}css/sumoselect.css" rel="stylesheet">
+    <link href="${STATIC_URL}css/build_group.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/jquery.sumoselect.min.js"></script>
+    <link href="${STATIC_URL}css/toastr.min.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/toastr.min.js"></script>
+</%block>
+
+<%block name="content">
+    <%include file="sidebar.html"/>
+    <div class="holds" style="padding-top:100px;padding-bottom:100px">
+        <div id="hd" class="king-page-topbar pl20 pr20 clearfix project-nav" data-step="2" data-intro="这里是导航，包含会议组的名字。" data-position="bottom">
+            <ul class="breadcrumb king-breadcrumb pl0 bg-transparent" style="border:0;text-align: left;">
+                % if old_url == 0:
+                    <li><a href="${SITE_URL}">首页</a></li>
+                    <li class="active">${header}</li>
+                % else:
+                <li><a href="${SITE_URL}">首页</a></li>
+                <li><a href="${SITE_URL}meeting/${data['group'].id}/">${data['group'].name}</a></li>
+                <li class="active">${header}</li>
+                % endif
+            </ul>
+        </div>
+        <% import base64 %>
+        <div id="form-holds">
+            <div style="width:600px;margin:20px 0 0 200px;text-align: left;">
+                <ul id="new-list" class="new-list-style step-list" style="overflow:auto;margin-left:10%;width:250px;display:inline-block" data-step="3" data-intro="这里是类别列表，可以拖动排序或合并它们。" data-position="left">
+                    % for c in category:
+                        <li id="li-${c['id']}" class="ui-state-default lili" style="cursor:move;" title="拖动排序">
+                            <div style="text-align: left;" class="pl10">
+                                <% cate_name = base64.b64decode(c['name']).decode('utf-8') %>
+                                <span class="real-name" style="display: none;">${ base64.b64decode(c['name']).decode('utf-8') }</span>
+                                <img src="${STATIC_URL}img/u20.png" height="50px"><span style="font-size:14px;display: inline-block;margin: 7px 0 0 15px;color:black">${cate_name if len(cate_name)<=7 else cate_name[:7] + '...'}</span>
+                                <a href="javascript:void(0)" id="a-remove-${c['id']}" title="删除"><i class="fa fa-remove fr" style="display: inline-block;margin-top:21px;font-size:14px"></i></a>
+                                <a href="javascript:void(0)" id="a-edit-${c['id']}" title="编辑"><i class="fa fa-pencil fr" style="display: inline-block;margin-top:21px;font-size:14px"></i></a>
+                            </div>
+                        </li>
+                    % endfor
+                </ul>
+                % if len(category) == 0:
+                    <div class="king-notice2 king-notice-info notice-borders" style="margin-left:10%;width:250px"><i class="fa fa-info-circle"></i><div class="notice-text"><p>暂无类别。</p></div></div>
+                % endif
+                <div style="display:inline-block;margin-bottom:14px;position:absolute;margin-left:20px">
+                    % for c in category:
+                        <div class="com-li" style="display:inline-block;width:75px;height:50px;margin-top:5px;background:#faa732;text-align: center;visibility:hidden;border-radius:15px">
+                            <span style="font-size:14px;line-height:4;color:white">放置合并</span>
+                        </div>
+                        <div class="com-tip" style="visibility: hidden;display:inline-block;width:200px;height:50px;margin-top:5px;background:#2f96b4;text-align: center;border-radius:15px">
+                            <span style="font-size:14px;line-height:4;color:white">text</span>
+                        </div><br>
+                    % endfor
+                </div>
+            </div>
+            <div style="width:600px;margin:20px 0 100px 200px;text-align: left;">
+                <a href="javascript:void(0)" onclick="category_add()"><span style="font-size:14px;display: block;margin-left:70px"><i class="fa fa-plus"></i>&nbsp;新增类别</span></a>
+            </div>
+        </div>
+        <div id="dust-holds" style="display:none">
+            <div style="width:600px;margin:20px 0 0 200px;text-align: left;">
+                <ul class="new-list-style step-dust" style="overflow:auto;margin-left:10%;width:250px;display:inline-block" data-step="3" data-position="left">
+                    % for d in dustbin:
+                        <li id="dust-${d['id']}" class="ui-state-default didi" style="cursor:pointer;opacity: 0.5;" title="选择还原对象">
+                            <div style="text-align: left;" class="pl10">
+                                <img src="${STATIC_URL}img/u20.png" height="50px">
+                                <span style="font-size:14px;display: inline-block;margin: 7px 0 0 15px;color:black">
+                                    ${base64.b64decode(d['name']).decode('utf-8')}
+                                </span>
+                            </div>
+                        </li>
+                    % endfor
+                </ul>
+                % if len(dustbin) == 0:
+                    <div class="king-notice2 king-notice-info notice-borders" style="margin-left:10%;width:250px"><i class="fa fa-info-circle"></i><div class="notice-text"><p>暂无被删除的类别。</p></div></div>
+                % endif
+            </div>
+            % if len(dustbin) > 0:
+                <div style="width:600px;margin:20px 0 100px 270px;text-align: left;">
+                    <span id="recycle" class="btn btn-large btn-info" style="margin-right:10px;width:64px">还原</span>
+                </div>
+            % endif
+        </div>
+    </div>
+    <script>
+        var tour_list = [
+            '这里是类别列表，可以拖动排序或合并它们。'
+        ];
+        var tour_dust = [
+            '这里是删除过的类别列表，可以选择并还原它们。'
+        ];
+        function tour_to_list(){
+            $(".step-dust").removeAttr('data-intro');
+            var step = $(".step-list");
+            for (var i=0;i<tour_list.length;i++){
+                step.eq(i).attr({'data-intro': tour_list[i]});
+            }
+        }
+        function tour_to_dust(){
+            $(".step-list").removeAttr('data-intro');
+            var step = $(".step-dust");
+            for (var i=0;i<tour_dust.length;i++){
+                step.eq(i).attr({'data-intro': tour_dust[i]});
+            }
+        }
+        var dust;
+        var dust_name;
+        $(".didi").click(function(){
+            $(".didi").css('opacity', '0.5').find('div').css('border', '0');
+            $(this).css('opacity', '1');
+            $(this).find('div').css('border', '2px solid #5bb75b');
+            dust = $(this)[0].id.split('-')[1];
+            dust_name = $(this).find('span').text();
+        });
+        function category_recycle(){
+            $.ajax({
+                url: "${SITE_URL}category/recycle/",
+                type: "post",
+                data: {
+                    category_id: dust,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        window.location.reload();
+                    } else {
+                        toastr['error']('还原失败');
+                    }
+                },
+                error: function(){
+                    toastr['error']('还原失败');
+                }
+            });
+        }
+        $("#recycle").click(function(){
+            if (dust != undefined){
+                art.dialog({
+                    width: 550,
+                    id: 'category-remove-dialog',
+                    title: '还原类别',
+                    content: '<p class="label-font">确认还原类别 <font style="color: #666fff;">'+ dust_name +'</font> 吗？</p>',
+                    lock: true,
+                    fixed: true,
+                    ok: function () {
+                        category_recycle();
+                    },
+                    okVal: '确认还原',
+                    cancelVal: '取消返回',
+                    cancel: function () {
+                    }
+                });
+                set_button();
+            } else {
+                toastr['error']('请选择一个要还原的类别');
+            }
+        });
+        function change_to_cate_list(){
+            $("#dust-holds").css('display', 'none');
+            $("#form-holds").css('display', 'block');
+            $(".bar-hover").removeClass('hover');
+            $("#category-list-hover").addClass('hover');
+            tour_to_list();
+        }
+        function change_to_dustbin(){
+            $("#form-holds").css('display', 'none');
+            $("#dust-holds").css('display', 'block');
+            $(".bar-hover").removeClass('hover');
+            $("#category-dust-hover").addClass('hover');
+            tour_to_dust();
+        }
+        function index_of_lili(that){
+            for (var i=0;i<$(".lili").length;i++){
+                if ($(that)[0].id == $(".lili").eq(i)[0].id){
+                    return i;
+                }
+            }
+            return -1;
+        }
+        $("#new-list").sortable({
+            dropOnEmpty: true
+        });
+        var take = undefined;
+        var com_li;
+        var li_li;
+        $(".lili").mousedown(function(){
+            take = $(this);
+            var index = index_of_lili(take);
+
+            com_li = [];
+            li_li = [];
+            for (var i=0;i<$(".lili").length;i++){
+                if (index == i) {
+                    com_li.push(false);
+                    li_li.push(false);
+                } else {
+                    com_li.push($(".com-li").eq(i));
+                    li_li.push($(".lili").eq(i));
+                }
+            }
+        });
+        $(document).mouseup(function(e){
+            $(".com-li").css({'visibility': 'hidden', 'background-color': '#faa732'});
+            $(".com-tip").css('visibility', 'hidden');
+            var index = which_one(e.pageX, e.pageY);
+            if (take) {
+                take.find('a').css('display', 'inline');
+                if ((index > -1) && com_li[index]) {
+                    var id_list = [$(take)[0].id.split('-')[1], li_li[index][0].id.split('-')[1]];
+                    var name_list = [$(take).find('.real-name').text(), li_li[index].find('.real-name').text()];
+                    category_combine(id_list, name_list);
+                } else {
+                    setTimeout(category_sort, 300);
+                }
+            }
+            take = undefined;
+        });
+        $(document).mousemove(function(e){
+            if (take) {
+                take.find('a').css('display', 'none');
+                for (var i=0;i<com_li.length;i++){
+                    if (com_li[i]) {
+                        $(com_li[i]).css('visibility', 'visible');
+                    }
+                }
+                var index = which_one(e.pageX, e.pageY);
+                var com_li_q = $(".com-li");
+                if (index > -1){
+                    com_li_q.css('background-color', '#faa732');
+                    com_li_q.eq(index).css('background-color', '#5bb75b');
+                    $(".com-tip").css('visibility', 'hidden');
+                    if (com_li[index]) {
+                        var the_text = li_li[index].find('.real-name').text();
+                        if (the_text.length > 7) {the_text = the_text.substring(0, 7) + '...'}
+                        com_li_q.eq(index).next().find('span').text('与 ' + the_text + ' 合并');
+                        com_li_q.eq(index).next().css('visibility', 'visible');
+                    }
+                } else {
+                    com_li_q.css('background-color', '#faa732');
+                    $(".com-tip").css('visibility', 'hidden');
+                }
+            }
+        });
+        function which_one(x, y){
+            var num = $(".com-li").length;
+            for (var i=0;i<num;i++){
+                var lx = 510;
+                var ly = 125 + i*55;
+                var rx = lx + 100;
+                var ry = ly + 50;
+                if ((lx <= x) && (x <= rx) && (ly <= y) && (y <= ry)){
+                    return i;
+                }
+            }
+            return -1;
+        }
+        function category_edit(name, show_count, describe, category_id){
+            $.ajax({
+                url: "${SITE_URL}category/edit/",
+                type: "post",
+                data: {
+                    name: name,
+                    show_count: show_count,
+                    describe: describe,
+                    category_id: category_id,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        //raise_success('edit', "更改保存成功");
+                        window.location.reload();
+                    } else {
+                        raise_danger('edit', response.info);
+                    }
+                },
+                error: function(){
+                    raise_danger('edit', "操作失败");
+                }
+            });
+        }
+        function category_remove(category_id){
+            $.ajax({
+                url: "${SITE_URL}category/remove/",
+                type: "post",
+                data: {
+                    category_id: category_id,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        toastr["success"]("删除成功");
+                        window.location.reload();
+                    } else {
+                        toastr["error"]("删除失败");
+                    }
+                },
+                error: function(){
+                    toastr["error"]("操作失败");
+                }
+            });
+        }
+        function category_add(){
+            art.dialog({
+                width: 550,
+                id: 'category-manager-dialog',
+                title: '新增类别',
+                content:
+                '<div id="category-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="category-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                +'<div id="category-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="category-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                + '<div class="king-notice2 king-notice-info notice-borders"><i class="fa fa-info-circle"></i><div class="notice-text"><p>新增一个分类类别，不能与现有名字冲突。</p></div></div>'
+                +'<div class="form-horizontal" style="margin-top:10px;width:450px">'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>类别名称:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="category-name" type="text" class="input-large"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>跟进展示数:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="category-showcount" value="1" type="number" class="input-large"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>类别说明:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><textarea id="category-describe" type="text" style="max-width:210px"></textarea></div></div>'
+                + '</div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: "确认创建",
+                        callback: function(){
+                            var show_holds = $("#category-showcount");
+                            var name = $("#category-name").val();
+                            var show_count = show_holds.val();
+                            var describe = $("#category-describe").val();
+                            if (!check_name_format(name)) {
+                                raise_danger('category', '类别名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等');
+                                return false;
+                            }
+                            if (isNaN(show_count) || !(parseInt(show_count) >= 0)){
+                                raise_danger('category', '跟进展示数是必填项，且为非负整数');
+                                return false;
+                            }
+                            show_holds.val(parseInt(show_count));
+                            $.ajax({
+                                url: "${SITE_URL}category/add/",
+                                type: "post",
+                                data: {
+                                    name: name,
+                                    show_count: show_count,
+                                    describe: describe,
+                                    group_id: ${group.id},
+                                    csrfmiddlewaretoken: getCookie('csrftoken')
+                                },
+                                dataType: 'json',
+                                success: function(response){
+                                    if (response.success){
+                                        //raise_success('category', "类别 "+ name +" 创建成功");
+                                        window.location.reload();
+                                    } else {
+                                        raise_danger('category', response.info);
+                                    }
+                                },
+                                error: function(){
+                                    raise_danger('category', "操作失败");
+                                }
+                            });
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: "取消返回",
+                        callback: function(){
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            $("#category-top-bar-danger-x").click(function(){
+                $("#category-top-bar-danger").css('display', 'none');
+            });$("#category-top-bar-success-x").click(function(){
+                $("#category-top-bar-success").css('display', 'none');
+            });
+        }
+        function category_combine(id_list, name_list){
+            art.dialog({
+                width: 550,
+                id: 'category-combine-dialog',
+                title: '合并类别',
+                content: '<div style="width:450px;">'+
+                '<div id="combine-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>危险提示相关信息!</span><div id="combine-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div id="combine-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none;margin-bottom:10px"><span>成功！</span><div id="combine-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'+
+                '<div class="king-notice2 king-notice-info notice-borders""><i class="fa fa-info-circle"></i><div class="notice-text"><p>将<font style="color:#666fff">'+name_list[0] + '、'+ name_list[1]+'</font>，合并为一个新的。它们下面的项目会归到新的类别中去。原有类别会被删除，你可以在回收站中找到它们。</p></div></div>'+
+                '<div class="form-horizontal" style="margin-top:10px;width:450px">'+
+                '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>合并的新名称:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="new-category-name" type="text" class="input-large"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'+
+                '</div>'+
+                '<div id="category-box"></div>'+
+                '</div>',
+                lock: true,
+                fixed: true,
+                button: [
+                    {
+                        name: "确认合并",
+                        callback: function(){
+                            var name = $("#new-category-name").val();
+                            if (!check_name_format(name)){
+                                raise_danger('combine', '类别名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等');
+                                return false;
+                            }
+                            $.ajax({
+                                url: "${SITE_URL}category/combine/",
+                                type: "post",
+                                data: {
+                                    name: name,
+                                    order: id_list,
+                                    group_id: ${group.id},
+                                    csrfmiddlewaretoken: getCookie('csrftoken')
+                                },
+                                dataType: 'json',
+                                success: function(response){
+                                    if (response.success){
+                                        //raise_success('combine', '合并操作成功');
+                                        window.location.reload();
+                                    } else {
+                                        raise_danger('combine', response.info);
+                                    }
+                                },
+                                error: function(){
+                                    raise_danger('combine', "操作失败");
+                                }
+                            });
+                            return false;
+                        },
+                        focus: true
+                    },
+                    {
+                        name: "取消返回",
+                        callback: function(){
+                            category_sort();
+                            return true;
+                        }
+                    }
+                ]
+            });
+            set_button();
+            $("#combine-top-bar-danger-x").click(function(){
+                $("#combine-top-bar-danger").css('display', 'none');
+            });$("#combine-top-bar-success-x").click(function(){
+                $("#combine-top-bar-success").css('display', 'none');
+            });
+        }
+        function category_sort(){
+            var order_list = $(".lili");
+            var order = [];
+            for (var i=0;i<order_list.length;i++){
+                var uid = order_list[i].id.split('-')[1];
+                if (uid != undefined) {
+                    order.push(uid);
+                }
+            }
+            $.ajax({
+                url: "${SITE_URL}category/sort/",
+                type: "post",
+                data: {
+                    order: order,
+                    group_id: ${group.id},
+                    csrfmiddlewaretoken: getCookie('csrftoken')
+                },
+                dataType: 'json',
+                success: function(response){
+                    console.log(response.success)
+                },
+                error: function(){
+                }
+            });
+        }
+        function htmlEncode(unsafe) {
+            return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+        }
+        % for c in category:
+            $("#a-edit-${c['id']}").click(function(){
+                art.dialog({
+                    width: 550,
+                    id: 'category-edit-dialog',
+                    title: '编辑类别',
+                    content: '<div id="edit-top-bar-danger" class="bg-danger" style="text-align:center;padding:10px;display:none"><span>危险提示相关信息!</span><div id="edit-top-bar-danger-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                    +'<div id="edit-top-bar-success" class="bg-success" style="text-align:center;padding:10px;display:none"><span>成功！</span><div id="edit-top-bar-success-x" style="font-size:20px; float:right;cursor:pointer;">×</div></div>'
+                    +'<div class="king-notice2 king-notice-info notice-borders" style="margin-top:10px"><i class="fa fa-info-circle"></i><div class="notice-text"><p>编辑类别信息。跟进展示数将决定展示多少个项目进度。</p></div></div>'
+                    +'<div class="form-horizontal" style="margin-top:10px;width:450px">'
+                    + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>类别名称:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="category-name" type="text" class="input-large" value="${base64.b64decode(c['name']).decode('utf-8')}"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                    + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>跟进展示数:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><input id="category-showcount" type="number" class="input-large" value="${c['show_count']}"/><span style="color:#d26a5c">&nbsp;&nbsp;&nbsp;*</span></div></div>'
+                    + '<div class="control-group"><label class="control-label label-font" style="width:150px;"><span>类别说明:&nbsp;&nbsp;</span></label><div class="controls" style="margin-left:110px;"><textarea id="category-describe" type="text" style="max-width:210px"></textarea></div></div>'
+                    + '</div>',
+                    lock: true,
+                    fixed: true,
+                    button: [
+                        {
+                            name: "保存编辑",
+                            callback: function () {
+                                var show_holds = $("#category-showcount");
+                                var name = $("#category-name").val();
+                                var show_count = show_holds.val();
+                                var describe = $("#category-describe").val();
+                                if (!check_name_format(name)) {
+                                    raise_danger('edit', '类别名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等');
+                                    return false;
+                                }
+                                if (isNaN(show_count) || !(parseInt(show_count) >= 0)){
+                                    raise_danger('edit', '跟进展示数必填且为非负整数');
+                                    return false;
+                                }
+                                show_holds.val(parseInt(show_count));
+                                category_edit(name, show_count, describe, ${c['id']});
+                                return false;
+                            },
+                            focus: true
+                        },
+                        {
+                            name: "取消返回",
+                            callback: function () {
+                                return true;
+                            }
+                        }
+                    ]
+                });
+                $("#category-describe").text(htmlDecode(decodeURIComponent(escape(atob("${c['describe'].encode("utf-8")}")))));
+                set_button();
+                $("#edit-top-bar-danger-x").click(function(){
+                    $("#edit-top-bar-danger").css('display', 'none');
+                });$("#edit-top-bar-success-x").click(function(){
+                    $("#edit-top-bar-success").css('display', 'none');
+                });
+            });
+            $("#a-remove-${c['id']}").click(function(){
+                art.dialog({
+                    width: 550,
+                    id: 'category-remove-dialog',
+                    title: '删除类别',
+                    content: '<p class="label-font">确认删除类别 <font style="color: #666fff;">${base64.b64decode(c['name']).decode('utf-8')}</font> 吗？</p>',
+                    lock: true,
+                    fixed: true,
+                    ok: function () {
+                        category_remove(${c['id']});
+                    },
+                    okVal: '确认删除',
+                    cancelVal: '取消返回',
+                    cancel: function () {
+                    }
+                });
+                set_button();
+            });
+        % endfor
+        function htmlDecode(str){
+            return str.replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#039;/g, "'")
+                .replace(/&nbsp;/g, ' ');
+        }
+    </script>
+</%block>

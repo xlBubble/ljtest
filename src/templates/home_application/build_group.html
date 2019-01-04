@@ -1,0 +1,446 @@
+<%inherit file="/base.html"/>
+
+<%block name='head'>
+    ${parent.head()}
+    <link href="${STATIC_URL}css/sumoselect.css" rel="stylesheet">
+    <link href="${STATIC_URL}css/build_group.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/jquery.sumoselect.min.js"></script>
+    <link href="${STATIC_URL}css/toastr.min.css" rel="stylesheet">
+    <link href="${STATIC_URL}css/dataTables.bootstrap.css" rel="stylesheet">
+    <script src="${STATIC_URL}js/toastr.min.js"></script>
+    <script src="${STATIC_URL}js/jquery.dataTables.js"></script>
+    <script src="${STATIC_URL}js/dataTables.bootstrap.js"></script>
+</%block>
+
+<%block name="content">
+    <%include file="sidebar.html"/>
+    <div class="holds" style="padding-top:100px;padding-bottom:100px">
+        <div id="hd" class="king-page-topbar pl20 pr20 clearfix project-nav">
+            <ul class="breadcrumb king-breadcrumb pl0 bg-transparent" style="border:0;text-align: left;">
+                % if data['type'] != 'manage':
+                    <li><a href="${SITE_URL}">首页</a></li>
+                    <li class="active">${header}</li>
+                % else:
+                    <li><a href="${SITE_URL}">首页</a></li>
+                    <li><a href="${SITE_URL}meeting/${data['group'].id}/">${data['group'].name}</a></li>
+                    <li class="active">${header}</li>
+                % endif
+            </ul>
+        </div>
+        <div id="table_holds" style="width:800px;margin:20px 0 0 230px" >
+            <table id="my_table" class="table table-bordered table-hover step-list" style="border:1px solid #dddddd" data-step="2" data-intro="你管理的会议列表，可以对它们进行编辑或注销操作。"
+                     data-position="right">
+                <thead>
+                    <tr>
+                        <th style="max-width:75px">会议名称</th>
+                        <th style="max-width:75px">会议成员</th>
+                        <th>创建人员</th>
+                        <th>创建时间</th>
+                        <th>修改人员</th>
+                        <th>修改时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div id="form-holds" style="width:600px;margin:20px 0 100px 200px;display:none">
+            <form id="group-form" method="post" action="${SITE_URL}group/save/" class="form-horizontal">
+                <input id="hd-type" type="hidden" name="type" value=""/>
+                <input id="hd-group-id" type="hidden" name="group_id" value=""/>
+                <input class="csrf-input" type="hidden" name="csrfmiddlewaretoken" value=""/>
+                <div class="form-group step-form" style="width:400px;margin:20px" data-step="2" data-intro="为你的会议起个名字，长度不超过50个字符。"
+                     data-position="right">
+                    <label for="group-name" class="control-label label-font">会议名称：</label>
+                    <input name="name" type="text" id="group-name" placeholder="输入会议名称" value="" style="width:190px">
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div class="form-group step-form" style="width:400px;margin:20px" data-step="3" data-intro="会议管理员拥有管理成员和类别的权限。"
+                     data-position="right">
+                    <label for="group-manager" class="control-label label-font">会议管理员：</label>
+                    <select name="manager" multiple="multiple" id="group-manager">
+                        % for m in members:
+                            <option value="${m.username}">${m.username}</option>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr">*</span>
+                </div>
+                <div id="manager-box" class="selected_box"></div>
+                <div class="form-group step-form" style="width:400px;margin:20px" data-step="4" data-intro="会议的基本组成成员。"
+                     data-position="right">
+                    <label for="group-member" class="control-label label-font">会议成员：</label>
+                    <select name="member" multiple="multiple" id="group-member">
+                        % for m in members:
+                            <option value="${m.username}">${m.username}</option>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr" style="visibility: hidden">*</span>
+                </div>
+                <div id="member-box" class="selected_box"></div>
+                <div class="form-group step-form" style="width:400px;margin:20px" data-step="5"
+                     data-intro="对该会议关注的人，例如知会人，不能进入会议。" data-position="right">
+                    <label for="group-focus" class="control-label label-font">关注人：</label>
+                    <select name="focus" multiple="multiple" id="group-focus">
+                        % for m in members:
+                            <option value="${m.username}">${m.username}</option>
+                        % endfor
+                    </select>
+                    <span class="text-danger mt5 fr" style="visibility: hidden">*</span>
+                </div>
+                <div id="focus-box" class="selected_box"></div>
+                <div class="form-group" style="width:200px;margin:40px;margin-left:187px">
+                    <span id="confirm" class="btn btn-large btn-success" style="margin-right:10px;width:64px">保存</span>
+                    <span id="remove" class="btn btn-large btn-default" style="background:#CCD1D1;width:64px">注销</span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        var tour_form = [
+            '为你的会议起个名字，长度不超过50个字符。',
+            '会议管理员拥有管理成员和类别的权限。',
+            '会议的基本组成成员。',
+            '对该会议关注的人，例如知会人，不能进入会议。'
+        ];
+        var tour_list = [
+            '这里是你作为管理员的会议列表。'
+        ];
+        function tour_to_form(){
+            $(".step-list").removeAttr('data-intro');
+            var step = $(".step-form");
+            for (var i=0;i<tour_form.length;i++){
+                step.eq(i).attr({'data-intro': tour_form[i]});
+            }
+        }
+        function tour_to_list(){
+            $(".step-form").removeAttr('data-intro');
+            var step = $(".step-list");
+            for (var i=0;i<tour_list.length;i++){
+                step.eq(i).attr({'data-intro': tour_list[i]});
+            }
+        }
+        function change_to_list(){
+            t.ajax.reload();
+            $("#form-holds").css('display', 'none');
+            $("#table_holds").css('display', 'block');
+            $(".bar-hover").removeClass('hover');
+            $("#meeting-list-hover").addClass('hover');
+            tour_to_list();
+        }
+        function change_to_new(){
+            clean_group();
+            $("#table_holds").css('display', 'none');
+            $("#form-holds").css('display', 'block');
+            $("#remove").css('visibility', 'hidden');
+            $(".bar-hover").removeClass('hover');
+            $("#meeting-new-hover").addClass('hover');
+            tour_to_form();
+        }
+        function change_to_manage(group_id){
+            clean_group();
+            fetch_group(group_id);
+            $("#table_holds").css('display', 'none');
+            $("#form-holds").css('display', 'block');
+            $("#remove").css('visibility', 'visible');
+            $(".bar-hover").removeClass('hover');
+            tour_to_form();
+        }
+        function fetch_group(group_id){
+            $.ajax({
+                url: "${SITE_URL}group/fetch/?group_id=" + group_id.toString(),
+                type: "get",
+                dataType: 'json',
+                success: function(response){
+                    if (response.success){
+                        clean_group();
+                        set_group(response.data);
+                    }
+                },
+                error: function(){
+                }
+            })
+        }
+        function set_group(data){
+            $("#group-name").val(data['name']);
+            $("#hd-type").val("update");
+            $("#hd-group-id").val(data['group_id']);
+            for (var i=0;i<member_list.length;i++){
+                var m = member_list[i];
+                if (data['manager'].indexOf(m) != -1){group_manager[0].sumo.selectItem(m);}
+                if (data['member'].indexOf(m) != -1){group_member[0].sumo.selectItem(m);}
+                if (data['focus'].indexOf(m) != -1){group_focus[0].sumo.selectItem(m);}
+            }
+        }
+        function clean_group(){
+            $("#hd-type").val("new");
+            $("#hd-group-id").val("0");
+            $("#group-name").val("");
+            for (var i=0;i<member_list.length;i++){
+                group_manager[0].sumo.unSelectItem(member_list[i]);
+                group_member[0].sumo.unSelectItem(member_list[i]);
+                group_focus[0].sumo.unSelectItem(member_list[i]);
+            }
+        }
+        function remove_group(group_id){
+            art.dialog({
+                width: 550,
+                id: 'show-dialog',
+                title: '保存确认',
+                content: '<p class="label-font">确认<font style="color:#ff6666"> 注销 </font>会议组吗？</p>',
+                lock: true,
+                fixed: true,
+                ok: function () {
+                    $.ajax({
+                        url: "${SITE_URL}group/remove/",
+                        type: "post",
+                        dataType: "json",
+                        data: {
+                            csrfmiddlewaretoken: getCookie('csrftoken'),
+                            group_id: group_id
+                        },
+                        success: function(response){
+                            if (response.success){
+                                toastr["success"]("注销成功");
+                                change_to_list();
+                            } else {
+                                toastr['success']("注销失败");
+                            }
+                        },
+                        error: function(){
+                            toastr["error"]("注销失败");
+                        }
+                    })
+                },
+                okVal: '确认注销',
+                cancelVal: '取消返回',
+                cancel: function () {
+                }
+            });
+            set_button();
+        }
+        var t = $("#my_table").DataTable({
+            language: {
+                processing: '加载中...',
+                zeroRecords: '暂无会议，快去新建吧!',
+                paginate: {
+                    first: '首页',
+                    last: '尾页',
+                    previous: '上一页',
+                    next: '下一页'
+                }
+            },
+            lengthChange: false,
+            pageLength: 10,
+            pageType: 'numbers',
+            searching: false,
+            serverSide: true,
+            processing: false,
+            ordering: false,
+            info: false,
+            ajax: function(data, callback, oSettings){
+                var that = this;
+                var params = {
+                    length: data.length,
+                    offset: data.start
+                };
+                $.ajax({
+                    type: 'GET',
+                    url: '${SITE_URL}group/get/',
+                    dataType: 'JSON',
+                    data: params,
+                    success: function(response){
+                        if (that.current_draw == undefined){
+                            that.current_draw = data.draw;
+                        }
+                        var json = {
+                            data: response.data,
+                            recordsTotal: response.total,
+                            draw: that.current_draw++,
+                            recordsFiltered: response.total
+                        };
+                        callback(json);
+                    },
+                    error: function(e){
+                        console.log(e);
+                    }
+                })
+            },
+            columns: [
+                {data: 'name'},
+                {data: 'members'},
+                {data: 'creator'},
+                {data: 'create_time'},
+                {data: 'updater'},
+                {data: 'update_time'},
+                {
+                    data: null,
+                    render: function(data){
+                        return '<a href="javascript:void(0)" onclick="change_to_manage('+data['group_id']+')">编辑</a>&nbsp;&nbsp;<a href="javascript:void(0)" onclick="remove_group('+data['group_id']+')">注销</a>';
+                    }
+                }
+            ]
+        });
+        <% import json %>
+        var member_list = ${json.dumps([m.username for m in members])};
+        function htmlEncode(unsafe) {
+            return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+        }
+        var group_manager = $("#group-manager");
+        var group_member = $("#group-member");
+        var group_focus = $("#group-focus");
+        group_manager.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择管理员",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        group_member.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择成员",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        group_focus.SumoSelect({
+            okCancelInMulti: false,
+            selectAll: true,
+            placeholder: "选择关注人",
+            captionFormat: '{0} 人',
+            captionFormatAllSelected: '{0} 人 全选',
+            search: true,
+            searchText: "搜索"
+        });
+        var manager_namelist = [];
+        var member_namelist = [];
+        var focus_namelist = [];
+        group_manager.bind('change', function (event) {
+            manager_namelist = [];
+            group_manager.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    manager_namelist.push($(this)[0].innerText);
+                }
+            });
+            var manager_box = $('#manager-box');
+            manager_box.empty();
+            if (manager_namelist.length) {
+                var html = '';
+                for (var i = 0; i < manager_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-info" style="white-space: normal;">' + manager_namelist[i] + '</span>';
+                }
+                manager_box.append(html);
+            }
+        });
+        group_member.bind('change', function (event) {
+            member_namelist = [];
+            group_member.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    member_namelist.push($(this)[0].innerText);
+                }
+            });
+            var member_box = $('#member-box');
+            member_box.empty();
+            if (member_namelist.length) {
+                var html = '';
+                for (var i = 0; i < member_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-success" style="white-space: normal;">' + member_namelist[i] + '</span>';
+                }
+                member_box.append(html);
+            }
+        });
+        group_focus.bind('change', function (event) {
+            focus_namelist = [];
+            group_focus.parents('div').eq(0).find("li").each(function () {
+                if ($(this).hasClass("selected")) {
+                    focus_namelist.push($(this)[0].innerText);
+                }
+            });
+            var focus_box = $('#focus-box');
+            focus_box.empty();
+            if (focus_namelist.length) {
+                var html = '';
+                for (var i = 0; i < focus_namelist.length; i++) {
+                    html += '<span class="selected_mentor label label-default" style="white-space: normal;">' + focus_namelist[i] + '</span>';
+                }
+                focus_box.append(html);
+            }
+        });
+        var name = '';
+        var manager = [];
+        var member = [];
+        var focus = [];
+        function check_name() {
+            name = $("#group-name").val();
+            if (check_name_format(name)) {
+                return true;
+            } else {
+                toastr["error"]("小组名称是必填项，不超过50个字符，不允许包含\'、\"、<、>、&、空格等");
+                return false;
+            }
+        }
+        function check_manager() {
+            manager = $("#group-manager").val();
+            member = $("#group-member").val();
+            focus = $("#group-focus").val();
+            if (manager) {
+                return true;
+            } else {
+                toastr["error"]("小组管理员是必填项", "保存失败");
+                return false;
+            }
+        }
+        var confirm_btn = $("#confirm");
+            confirm_btn.click(function () {
+                if (check_name() && check_manager()) {
+                    if ($("#hd-type").val() == 'new'){
+                        $(".csrf-input").val(getCookie('csrftoken'));
+                        $("#group-form").submit();
+                    } else {
+                        art.dialog({
+                            width: 550,
+                            id: 'show-dialog',
+                            title: '保存确认',
+                            content: '<p class="label-font">确认保存会议组吗？</p>',
+                            lock: true,
+                            fixed: true,
+                            ok: function () {
+                                $(".csrf-input").val(getCookie('csrftoken'));
+                                $("#group-form").submit();
+                            },
+                            okVal: '确认保存',
+                            cancelVal: '取消',
+                            cancel: function () {
+                            }
+                        });
+                        set_button();
+                    }
+                }
+            });
+        $("#remove").click(function(){
+            var group_id = $("#hd-group-id").val();
+            remove_group(group_id);
+        });
+
+        $(document).ready(function () {
+            var tp = "${data['type']}";
+            var group_id = '${data["group"].id if data["group"] else 0}';
+            if (tp == 'manage') {
+                change_to_manage(group_id)
+            } else {
+                if (tp == 'new'){
+                    change_to_new();
+                } else {
+                    change_to_list();
+                }
+            }
+        });
+    </script>
+</%block>
